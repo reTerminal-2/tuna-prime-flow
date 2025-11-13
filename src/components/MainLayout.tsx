@@ -51,7 +51,7 @@ function AppSidebar() {
       setOpenMobile(false);
       await supabase.auth.signOut();
       toast.success("Logged out successfully");
-      navigate("/auth");
+      // Don't navigate here - let onAuthStateChange handle it
     } catch (error) {
       console.error("Logout error:", error);
       toast.error("Logout failed");
