@@ -30,6 +30,17 @@ import {
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { z } from "zod";
+
+const productSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  sku: z.string().trim().min(1, "SKU is required").max(50, "SKU must be less than 50 characters"),
+  cost_price: z.number().positive("Cost price must be positive").max(999999, "Cost price too large"),
+  selling_price: z.number().positive("Selling price must be positive").max(999999, "Selling price too large"),
+  current_stock: z.number().nonnegative("Stock cannot be negative").max(999999, "Stock value too large"),
+  reorder_level: z.number().nonnegative("Reorder level cannot be negative").max(999999, "Reorder level too large"),
+  description: z.string().max(500, "Description must be less than 500 characters").optional(),
+});
 
 interface Product {
   id: string;
@@ -115,17 +126,34 @@ const Inventory = () => {
 
   const handleAddProduct = async () => {
     try {
+      // Validate input
+      const validationResult = productSchema.safeParse({
+        name: newProduct.name,
+        sku: newProduct.sku,
+        cost_price: parseFloat(newProduct.cost_price),
+        selling_price: parseFloat(newProduct.selling_price),
+        current_stock: parseFloat(newProduct.current_stock),
+        reorder_level: parseFloat(newProduct.reorder_level),
+        description: newProduct.description || undefined,
+      });
+
+      if (!validationResult.success) {
+        const errors = validationResult.error.errors.map(e => e.message).join(", ");
+        toast.error(errors);
+        return;
+      }
+
       const { error } = await supabase.from("products").insert([
         {
-          name: newProduct.name,
-          sku: newProduct.sku,
+          name: validationResult.data.name,
+          sku: validationResult.data.sku,
           category: newProduct.category,
-          description: newProduct.description || null,
+          description: validationResult.data.description || null,
           unit_of_measure: newProduct.unit_of_measure,
-          cost_price: parseFloat(newProduct.cost_price),
-          selling_price: parseFloat(newProduct.selling_price),
-          current_stock: parseFloat(newProduct.current_stock),
-          reorder_level: parseFloat(newProduct.reorder_level),
+          cost_price: validationResult.data.cost_price,
+          selling_price: validationResult.data.selling_price,
+          current_stock: validationResult.data.current_stock,
+          reorder_level: validationResult.data.reorder_level,
           supplier_id: newProduct.supplier_id || null,
           expiration_date: newProduct.expiration_date || null,
         },
