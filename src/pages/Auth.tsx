@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,25 +12,50 @@ import { Fish } from "lucide-react";
 const Auth = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({ email: "", password: "", fullName: "" });
+  const hasNavigatedRef = useRef(false);
 
   useEffect(() => {
-    // Check if user is already logged in
+    let mounted = true;
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!mounted) return;
+        
+        console.log('Auth page - state changed:', event, !!session);
+        
+        if (session && event !== 'SIGNED_OUT' && !hasNavigatedRef.current) {
+          hasNavigatedRef.current = true;
+          navigate("/dashboard", { replace: true });
+          setTimeout(() => {
+            hasNavigatedRef.current = false;
+          }, 100);
+        }
+        setIsCheckingAuth(false);
+      }
+    );
+
+    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/dashboard");
+      if (!mounted) return;
+      
+      if (session && !hasNavigatedRef.current) {
+        hasNavigatedRef.current = true;
+        navigate("/dashboard", { replace: true });
+        setTimeout(() => {
+          hasNavigatedRef.current = false;
+        }, 100);
       }
+      setIsCheckingAuth(false);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate("/dashboard");
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -45,9 +70,9 @@ const Auth = () => {
 
       if (error) throw error;
       toast.success("Login successful!");
+      // Navigation will be handled by onAuthStateChange
     } catch (error: any) {
       toast.error(error.message || "Login failed");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -71,12 +96,16 @@ const Auth = () => {
 
       if (error) throw error;
       toast.success("Account created! You can now log in.");
+      setIsLoading(false);
     } catch (error: any) {
       toast.error(error.message || "Signup failed");
-    } finally {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingAuth) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 sm:p-6">

@@ -47,11 +47,16 @@ function AppSidebar() {
 
   const handleLogout = async () => {
     try {
-      // Close mobile sidebar first
+      // Close mobile sidebar immediately for fast UX
       setOpenMobile(false);
-      await supabase.auth.signOut();
+      
+      // Clear session
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
       toast.success("Logged out successfully");
-      // Don't navigate here - let onAuthStateChange handle it
+      // Navigation will be handled by onAuthStateChange
     } catch (error) {
       console.error("Logout error:", error);
       toast.error("Logout failed");
@@ -122,38 +127,70 @@ interface MainLayoutProps {
 const MainLayout = ({ children }: MainLayoutProps) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const isNavigatingRef = useRef(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const hasNavigatedRef = useRef(false);
 
   useEffect(() => {
-    // Check if user is logged in
+    let mounted = true;
+
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+
+        console.log('Auth state changed:', event, !!session);
+        
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setIsLoading(false);
+          if (!hasNavigatedRef.current) {
+            hasNavigatedRef.current = true;
+            navigate("/auth", { replace: true });
+            setTimeout(() => {
+              hasNavigatedRef.current = false;
+            }, 100);
+          }
+        } else if (session) {
+          setUser(session.user);
+          setIsLoading(false);
+          hasNavigatedRef.current = false;
+        } else {
+          setUser(null);
+          setIsLoading(false);
+          if (!hasNavigatedRef.current) {
+            hasNavigatedRef.current = true;
+            navigate("/auth", { replace: true });
+            setTimeout(() => {
+              hasNavigatedRef.current = false;
+            }, 100);
+          }
+        }
+      }
+    );
+
+    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        if (!isNavigatingRef.current) {
-          isNavigatingRef.current = true;
-          navigate("/auth");
-        }
-      } else {
+      if (!mounted) return;
+      
+      if (session) {
         setUser(session.user);
+      } else if (!hasNavigatedRef.current) {
+        hasNavigatedRef.current = true;
+        navigate("/auth", { replace: true });
+        setTimeout(() => {
+          hasNavigatedRef.current = false;
+        }, 100);
       }
+      setIsLoading(false);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        if (!isNavigatingRef.current) {
-          isNavigatingRef.current = true;
-          navigate("/auth");
-        }
-      } else {
-        isNavigatingRef.current = false;
-        setUser(session.user);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
-  if (!user) {
+  if (isLoading || !user) {
     return null;
   }
 
