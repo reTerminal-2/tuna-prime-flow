@@ -16,6 +16,16 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Plus, Trash2, Users as UsersIcon } from "lucide-react";
+import { z } from "zod";
+
+const supplierSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  contact_person: z.string().trim().max(100, "Contact person must be less than 100 characters").optional().or(z.literal('')),
+  email: z.string().trim().email("Invalid email address").max(255, "Email must be less than 255 characters").optional().or(z.literal('')),
+  phone: z.string().trim().max(20, "Phone must be less than 20 characters").optional().or(z.literal('')),
+  address: z.string().trim().max(500, "Address must be less than 500 characters").optional().or(z.literal('')),
+  notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional().or(z.literal('')),
+});
 
 interface Supplier {
   id: string;
@@ -63,14 +73,30 @@ const Suppliers = () => {
 
   const handleAddSupplier = async () => {
     try {
+      // Validate input
+      const validationResult = supplierSchema.safeParse({
+        name: newSupplier.name,
+        contact_person: newSupplier.contact_person,
+        email: newSupplier.email,
+        phone: newSupplier.phone,
+        address: newSupplier.address,
+        notes: newSupplier.notes,
+      });
+
+      if (!validationResult.success) {
+        const errors = validationResult.error.errors.map(e => e.message).join(", ");
+        toast.error(errors);
+        return;
+      }
+
       const { error } = await supabase.from("suppliers").insert([
         {
-          name: newSupplier.name,
-          contact_person: newSupplier.contact_person || null,
-          email: newSupplier.email || null,
-          phone: newSupplier.phone || null,
-          address: newSupplier.address || null,
-          notes: newSupplier.notes || null,
+          name: validationResult.data.name,
+          contact_person: validationResult.data.contact_person || null,
+          email: validationResult.data.email || null,
+          phone: validationResult.data.phone || null,
+          address: validationResult.data.address || null,
+          notes: validationResult.data.notes || null,
         },
       ]);
 
