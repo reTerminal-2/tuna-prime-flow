@@ -40,17 +40,21 @@ const navItems = [
 ];
 
 function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
 
   const handleLogout = async () => {
     try {
+      // Close mobile sidebar first
+      setOpenMobile(false);
       await supabase.auth.signOut();
       toast.success("Logged out successfully");
+      navigate("/auth");
     } catch (error) {
       console.error("Logout error:", error);
+      toast.error("Logout failed");
     }
   };
 
@@ -157,15 +161,18 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
-        <main className="flex-1 flex flex-col">
-          <header className="h-14 border-b border-border bg-card flex items-center px-4 sticky top-0 z-10">
+        <main className="flex-1 flex flex-col min-w-0">
+          <header className="h-14 border-b border-border bg-card flex items-center px-4 lg:px-6 sticky top-0 z-10 shrink-0">
             <SidebarTrigger>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="lg:hidden">
                 <Menu className="h-5 w-5" />
               </Button>
             </SidebarTrigger>
+            <div className="ml-auto text-sm text-muted-foreground hidden sm:block">
+              {user?.email}
+            </div>
           </header>
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto p-4 lg:p-6">
             {children}
           </div>
         </main>
