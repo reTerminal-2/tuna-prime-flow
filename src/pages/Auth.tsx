@@ -6,8 +6,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Fish } from "lucide-react";
+import { z } from "zod";
+
+// Validation schemas
+const loginSchema = z.object({
+  email: z.string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Invalid email address")
+    .max(255, "Email must be less than 255 characters"),
+  password: z.string()
+    .min(6, "Password must be at least 6 characters")
+    .max(100, "Password must be less than 100 characters"),
+});
+
+const signupSchema = z.object({
+  fullName: z.string()
+    .trim()
+    .min(1, "Full name is required")
+    .max(100, "Name must be less than 100 characters"),
+  email: z.string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Invalid email address")
+    .max(255, "Email must be less than 255 characters"),
+  password: z.string()
+    .min(6, "Password must be at least 6 characters")
+    .max(100, "Password must be less than 100 characters"),
+});
+
+const REMEMBER_ME_KEY = "tuna_inventory_remember_email";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -15,7 +46,21 @@ const Auth = () => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({ email: "", password: "", fullName: "" });
+  const [rememberMe, setRememberMe] = useState(false);
   const hasNavigatedRef = useRef(false);
+
+  // Load saved email on mount
+  useEffect(() => {
+    try {
+      const savedEmail = localStorage.getItem(REMEMBER_ME_KEY);
+      if (savedEmail) {
+        setLoginData(prev => ({ ...prev, email: savedEmail }));
+        setRememberMe(true);
+      }
+    } catch (error) {
+      console.error("Error loading saved email:", error);
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -60,15 +105,38 @@ const Auth = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate input
+    try {
+      loginSchema.parse(loginData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: loginData.email,
+        email: loginData.email.trim(),
         password: loginData.password,
       });
 
       if (error) throw error;
+
+      // Handle remember me
+      try {
+        if (rememberMe) {
+          localStorage.setItem(REMEMBER_ME_KEY, loginData.email.trim());
+        } else {
+          localStorage.removeItem(REMEMBER_ME_KEY);
+        }
+      } catch (storageError) {
+        console.error("Error saving remember me preference:", storageError);
+      }
+
       toast.success("Login successful!");
       // Navigation will be handled by onAuthStateChange
     } catch (error: any) {
@@ -79,17 +147,28 @@ const Auth = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate input
+    try {
+      signupSchema.parse(signupData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     try {
       const redirectUrl = `${window.location.origin}/dashboard`;
       const { error } = await supabase.auth.signUp({
-        email: signupData.email,
+        email: signupData.email.trim(),
         password: signupData.password,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            full_name: signupData.fullName,
+            full_name: signupData.fullName.trim(),
           },
         },
       });
@@ -139,6 +218,8 @@ const Auth = () => {
                     value={loginData.email}
                     onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                     required
+                    maxLength={255}
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -150,7 +231,22 @@ const Auth = () => {
                     value={loginData.password}
                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                     required
+                    maxLength={100}
+                    autoComplete="current-password"
                   />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="remember-me"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  />
+                  <Label
+                    htmlFor="remember-me"
+                    className="text-sm font-normal cursor-pointer select-none"
+                  >
+                    Remember my email
+                  </Label>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Logging in..." : "Log In"}
@@ -169,6 +265,8 @@ const Auth = () => {
                     value={signupData.fullName}
                     onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
                     required
+                    maxLength={100}
+                    autoComplete="name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -180,6 +278,8 @@ const Auth = () => {
                     value={signupData.email}
                     onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
                     required
+                    maxLength={255}
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -187,10 +287,13 @@ const Auth = () => {
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="Create a password"
+                    placeholder="Create a password (min 6 characters)"
                     value={signupData.password}
                     onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                     required
+                    minLength={6}
+                    maxLength={100}
+                    autoComplete="new-password"
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
