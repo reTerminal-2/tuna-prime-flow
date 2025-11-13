@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingDown, Clock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { DollarSign, TrendingDown, Clock, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 interface PricingRule {
@@ -23,10 +25,24 @@ const Pricing = () => {
   const [rules, setRules] = useState<PricingRule[]>([]);
   const [pricingLogs, setPricingLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [taxSettings, setTaxSettings] = useState({
+    vatRate: "12",
+    includeVat: true,
+    seniorPwdDiscount: true,
+    withholdingTax: false,
+    withholdingTaxRate: "5",
+  });
 
   useEffect(() => {
     fetchPricingRules();
     fetchPricingLogs();
+    
+    // Load saved tax settings
+    const savedTaxSettings = localStorage.getItem("taxSettings");
+    if (savedTaxSettings) {
+      setTaxSettings(JSON.parse(savedTaxSettings));
+    }
   }, []);
 
   const fetchPricingRules = async () => {
@@ -78,6 +94,11 @@ const Pricing = () => {
     }
   };
 
+  const handleSaveTaxSettings = () => {
+    localStorage.setItem("taxSettings", JSON.stringify(taxSettings));
+    toast.success("Tax settings saved successfully");
+  };
+
   const getRuleTypeIcon = (type: string) => {
     switch (type) {
       case "expiration_based":
@@ -106,12 +127,102 @@ const Pricing = () => {
       <div>
         <h1 className="text-3xl font-bold">Pricing Engine</h1>
         <p className="text-muted-foreground">
-          Configure dynamic pricing rules for optimal profit
+          Configure dynamic pricing rules and tax settings
         </p>
       </div>
 
+      {/* Tax & Pricing Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Receipt className="h-5 w-5" />
+            Tax & Pricing Configuration (Philippine Settings)
+          </CardTitle>
+          <CardDescription>Configure Philippine tax rates and pricing rules</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="vat-rate">VAT Rate (%)</Label>
+                <Input
+                  id="vat-rate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={taxSettings.vatRate}
+                  onChange={(e) => setTaxSettings({ ...taxSettings, vatRate: e.target.value })}
+                />
+                <p className="text-sm text-muted-foreground">Standard Philippine VAT is 12%</p>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="include-vat">Include VAT in Prices</Label>
+                  <p className="text-sm text-muted-foreground">Display prices with VAT included</p>
+                </div>
+                <Switch
+                  id="include-vat"
+                  checked={taxSettings.includeVat}
+                  onCheckedChange={(checked) => setTaxSettings({ ...taxSettings, includeVat: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="senior-pwd">Senior Citizen/PWD Discount</Label>
+                  <p className="text-sm text-muted-foreground">Enable 20% discount + VAT exemption</p>
+                </div>
+                <Switch
+                  id="senior-pwd"
+                  checked={taxSettings.seniorPwdDiscount}
+                  onCheckedChange={(checked) => setTaxSettings({ ...taxSettings, seniorPwdDiscount: checked })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="withholding-tax">Apply Withholding Tax</Label>
+                  <p className="text-sm text-muted-foreground">Enable withholding tax for business transactions</p>
+                </div>
+                <Switch
+                  id="withholding-tax"
+                  checked={taxSettings.withholdingTax}
+                  onCheckedChange={(checked) => setTaxSettings({ ...taxSettings, withholdingTax: checked })}
+                />
+              </div>
+
+              {taxSettings.withholdingTax && (
+                <div className="space-y-2">
+                  <Label htmlFor="withholding-rate">Withholding Tax Rate (%)</Label>
+                  <Input
+                    id="withholding-rate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={taxSettings.withholdingTaxRate}
+                    onChange={(e) => setTaxSettings({ ...taxSettings, withholdingTaxRate: e.target.value })}
+                  />
+                  <p className="text-sm text-muted-foreground">Standard rates: 1% (goods), 2% (services), 5% (professional)</p>
+                </div>
+              )}
+
+              <div className="pt-4">
+                <Button onClick={handleSaveTaxSettings} className="w-full">
+                  Save Tax Settings
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Active Rules</h2>
+        <h2 className="text-xl font-semibold">Active Pricing Rules</h2>
         {rules.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center">
