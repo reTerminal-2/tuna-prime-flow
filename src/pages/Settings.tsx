@@ -1,19 +1,20 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, DollarSign, Package, Calendar } from "lucide-react";
+import { Bell, DollarSign, Package, Palette } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTheme } from "next-themes";
 
 const Settings = () => {
+  const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState({
     lowStock: true,
     expiringProducts: true,
     priceChanges: false,
   });
-  const [currency, setCurrency] = useState("USD");
   const [stockAlertDays, setStockAlertDays] = useState("7");
 
   const handleSave = () => {
@@ -30,6 +31,29 @@ const Settings = () => {
       </div>
 
       <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Appearance
+            </CardTitle>
+            <CardDescription>Customize the look and feel of the application</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="dark-mode">Dark Mode</Label>
+                <p className="text-sm text-muted-foreground">Toggle between light and dark theme</p>
+              </div>
+              <Switch
+                id="dark-mode"
+                checked={theme === "dark"}
+                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -81,24 +105,18 @@ const Settings = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
-              Currency & Display
+              Currency
             </CardTitle>
-            <CardDescription>Configure display preferences</CardDescription>
+            <CardDescription>System currency configuration</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="space-y-2">
-              <Label htmlFor="currency">Default Currency</Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger id="currency">
-                  <SelectValue placeholder="Select currency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="EUR">EUR (€)</SelectItem>
-                  <SelectItem value="GBP">GBP (£)</SelectItem>
-                  <SelectItem value="JPY">JPY (¥)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Default Currency</Label>
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">PHP (Philippine Peso ₱)</span>
+              </div>
+              <p className="text-sm text-muted-foreground">All prices and transactions are in Philippine Peso</p>
             </div>
           </CardContent>
         </Card>
