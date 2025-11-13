@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
@@ -46,9 +46,12 @@ function AppSidebar() {
   const currentPath = location.pathname;
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Logged out successfully");
-    navigate("/auth");
+    try {
+      await supabase.auth.signOut();
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (
@@ -115,12 +118,16 @@ interface MainLayoutProps {
 const MainLayout = ({ children }: MainLayoutProps) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
+  const isNavigatingRef = useRef(false);
 
   useEffect(() => {
     // Check if user is logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        navigate("/auth");
+        if (!isNavigatingRef.current) {
+          isNavigatingRef.current = true;
+          navigate("/auth");
+        }
       } else {
         setUser(session.user);
       }
@@ -129,8 +136,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
-        navigate("/auth");
+        if (!isNavigatingRef.current) {
+          isNavigatingRef.current = true;
+          navigate("/auth");
+        }
       } else {
+        isNavigatingRef.current = false;
         setUser(session.user);
       }
     });
