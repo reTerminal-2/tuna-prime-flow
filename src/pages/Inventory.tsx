@@ -472,8 +472,8 @@ const Inventory = () => {
                   <TableCell>
                     {product.current_stock} {product.unit_of_measure}
                   </TableCell>
-                  <TableCell>${product.cost_price}</TableCell>
-                  <TableCell>${product.selling_price}</TableCell>
+                  <TableCell>₱{product.cost_price}</TableCell>
+                  <TableCell>₱{product.selling_price}</TableCell>
                   <TableCell>
                     {product.expiration_date ? (
                       <span
