@@ -65,7 +65,7 @@ const Suppliers = () => {
       setSuppliers(data || []);
     } catch (error) {
       console.error("Error fetching suppliers:", error);
-      toast.error("Failed to load suppliers");
+      toast.error("Unable to load suppliers. Please refresh the page or check your internet connection.");
     } finally {
       setLoading(false);
     }
@@ -122,7 +122,17 @@ const Suppliers = () => {
       fetchSuppliers();
     } catch (error: any) {
       console.error("Error adding supplier:", error);
-      toast.error(error.message || "Failed to add supplier");
+      const errorMsg = error.message || "";
+      
+      if (errorMsg.includes("duplicate key") || errorMsg.includes("already exists")) {
+        toast.error("A supplier with this name already exists. Please use a different name.");
+      } else if (errorMsg.includes("violates row-level security")) {
+        toast.error("You don't have permission to add suppliers. Please log in again.");
+      } else if (errorMsg.includes("invalid email")) {
+        toast.error("Please enter a valid email address for the supplier.");
+      } else {
+        toast.error("Unable to add supplier. Please check all fields and try again.");
+      }
     }
   };
 
@@ -136,7 +146,15 @@ const Suppliers = () => {
       fetchSuppliers();
     } catch (error: any) {
       console.error("Error deleting supplier:", error);
-      toast.error(error.message || "Failed to delete supplier");
+      const errorMsg = error.message || "";
+      
+      if (errorMsg.includes("foreign key") || errorMsg.includes("still referenced")) {
+        toast.error("Cannot delete this supplier because some products are linked to them. Please update or remove those products first.");
+      } else if (errorMsg.includes("permission")) {
+        toast.error("You don't have permission to delete this supplier.");
+      } else {
+        toast.error("Unable to delete supplier. Please try again.");
+      }
     }
   };
 

@@ -88,7 +88,7 @@ const Pricing = () => {
       setRules(data || []);
     } catch (error) {
       console.error("Error fetching pricing rules:", error);
-      toast.error("Failed to load pricing rules");
+      toast.error("Unable to load pricing rules. Please refresh the page or check your internet connection.");
     } finally {
       setLoading(false);
     }
@@ -143,7 +143,7 @@ const Pricing = () => {
   const handleCreateRule = async () => {
     try {
       if (!newRule.name || !newRule.price_adjustment_percent) {
-        toast.error("Please fill in all required fields");
+        toast.error("Please fill in the rule name and price adjustment percentage to continue.");
         return;
       }
 
@@ -194,7 +194,17 @@ const Pricing = () => {
       fetchPricingRules();
     } catch (error: any) {
       console.error("Error creating rule:", error);
-      toast.error(error.message || "Failed to create rule");
+      const errorMsg = error.message || "";
+      
+      if (errorMsg.includes("duplicate")) {
+        toast.error("A pricing rule with this name already exists. Please use a different name.");
+      } else if (errorMsg.includes("invalid")) {
+        toast.error("Please check that all values are valid numbers and the rule type is selected.");
+      } else if (errorMsg.includes("permission")) {
+        toast.error("You don't have permission to create pricing rules. Please log in again.");
+      } else {
+        toast.error("Unable to create pricing rule. Please check all fields and try again.");
+      }
     }
   };
 
@@ -202,7 +212,7 @@ const Pricing = () => {
     try {
       const activeRules = rules.filter(r => r.is_active);
       if (activeRules.length === 0) {
-        toast.error("No active rules to apply");
+        toast.error("No active pricing rules found. Please create and activate at least one rule before applying prices.");
         return;
       }
 
@@ -212,7 +222,7 @@ const Pricing = () => {
       }
 
       if (filteredProducts.length === 0) {
-        toast.error("No products found for selected category");
+        toast.error(`No products found in the ${selectedCategory === 'all' ? '' : selectedCategory} category. Please select a different category or add products first.`);
         return;
       }
 
@@ -275,7 +285,7 @@ const Pricing = () => {
   const calculatePrice = () => {
     const basePrice = parseFloat(calculatorInputs.basePrice);
     if (isNaN(basePrice)) {
-      toast.error("Please enter a valid base price");
+      toast.error("Please enter a valid number for the base price (e.g., 10.50)");
       return null;
     }
 

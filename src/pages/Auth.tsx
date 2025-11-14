@@ -142,7 +142,18 @@ const Auth = () => {
       toast.success("Login successful!");
       // Navigation will be handled by onAuthStateChange
     } catch (error: any) {
-      toast.error(error.message || "Login failed");
+      const errorMsg = error.message || "Login failed";
+      
+      // Provide user-friendly error messages
+      if (errorMsg.includes("Invalid login credentials")) {
+        toast.error("Incorrect email or password. Please check your credentials and try again.");
+      } else if (errorMsg.includes("Email not confirmed")) {
+        toast.error("Please verify your email address before logging in.");
+      } else if (errorMsg.includes("User not found")) {
+        toast.error("No account found with this email. Please sign up first.");
+      } else {
+        toast.error("Unable to log in. Please check your email and password.");
+      }
       setIsLoading(false);
     }
   };
@@ -179,7 +190,18 @@ const Auth = () => {
       toast.success("Account created! You can now log in.");
       setIsLoading(false);
     } catch (error: any) {
-      toast.error(error.message || "Signup failed");
+      const errorMsg = error.message || "Signup failed";
+      
+      // Provide user-friendly error messages
+      if (errorMsg.includes("already registered") || errorMsg.includes("already exists")) {
+        toast.error("This email is already registered. Please log in or use a different email.");
+      } else if (errorMsg.includes("invalid email")) {
+        toast.error("Please enter a valid email address.");
+      } else if (errorMsg.includes("Password")) {
+        toast.error("Password must be at least 6 characters long.");
+      } else {
+        toast.error("Unable to create account. Please try again or contact support.");
+      }
       setIsLoading(false);
     }
   };
