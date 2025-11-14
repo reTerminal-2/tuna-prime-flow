@@ -89,6 +89,12 @@ const Suppliers = () => {
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to add suppliers");
+        return;
+      }
+
       const { error } = await supabase.from("suppliers").insert([
         {
           name: validationResult.data.name,
@@ -97,6 +103,7 @@ const Suppliers = () => {
           phone: validationResult.data.phone || null,
           address: validationResult.data.address || null,
           notes: validationResult.data.notes || null,
+          user_id: user.id,
         },
       ]);
 

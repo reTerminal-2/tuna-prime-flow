@@ -23,6 +23,7 @@ export type Database = {
           product_id: string | null
           reason: string | null
           rule_id: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -32,6 +33,7 @@ export type Database = {
           product_id?: string | null
           reason?: string | null
           rule_id?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -41,6 +43,7 @@ export type Database = {
           product_id?: string | null
           reason?: string | null
           rule_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -74,6 +77,7 @@ export type Database = {
           priority: number | null
           rule_type: Database["public"]["Enums"]["rule_type"]
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           applies_to_category?:
@@ -89,6 +93,7 @@ export type Database = {
           priority?: number | null
           rule_type: Database["public"]["Enums"]["rule_type"]
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           applies_to_category?:
@@ -104,6 +109,7 @@ export type Database = {
           priority?: number | null
           rule_type?: Database["public"]["Enums"]["rule_type"]
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -123,6 +129,7 @@ export type Database = {
           supplier_id: string | null
           unit_of_measure: string
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           category: Database["public"]["Enums"]["product_category"]
@@ -139,6 +146,7 @@ export type Database = {
           supplier_id?: string | null
           unit_of_measure?: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           category?: Database["public"]["Enums"]["product_category"]
@@ -155,6 +163,7 @@ export type Database = {
           supplier_id?: string | null
           unit_of_measure?: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -245,6 +254,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           address?: string | null
@@ -256,6 +266,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           address?: string | null
@@ -267,6 +278,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
