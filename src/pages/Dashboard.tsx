@@ -9,6 +9,8 @@ interface DashboardStats {
   totalInventoryValue: number;
   expiringCount: number;
   lowStockCount: number;
+  todaySales: number;
+  todayProfit: number;
 }
 
 const Dashboard = () => {
@@ -17,6 +19,8 @@ const Dashboard = () => {
     totalInventoryValue: 0,
     expiringCount: 0,
     lowStockCount: 0,
+    todaySales: 0,
+    todayProfit: 0,
   });
   const [expiringProducts, setExpiringProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +37,14 @@ const Dashboard = () => {
         .select("*");
 
       if (error) throw error;
+
+      // Fetch today's transactions
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const { data: transactions } = await supabase
+        .from("transactions")
+        .select("*")
+        .gte("transaction_date", today.toISOString());
 
       if (products) {
         // Calculate stats
@@ -55,11 +67,17 @@ const Dashboard = () => {
           (p) => Number(p.current_stock) <= Number(p.reorder_level)
         );
 
+        // Calculate today's sales and profit
+        const todaySales = transactions?.reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+        const todayProfit = transactions?.reduce((sum, t) => sum + Number(t.profit), 0) || 0;
+
         setStats({
           totalProducts,
           totalInventoryValue,
           expiringCount: expiring.length,
           lowStockCount: lowStock.length,
+          todaySales,
+          todayProfit,
         });
 
         setExpiringProducts(expiring);
@@ -116,7 +134,29 @@ const Dashboard = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today's Sales</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₱{stats.todaySales.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Total sales today</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today's Profit</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₱{stats.todayProfit.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Net profit today</p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Products</CardTitle>
@@ -131,7 +171,7 @@ const Dashboard = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
