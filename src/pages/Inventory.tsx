@@ -28,8 +28,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Package } from "lucide-react";
+import { Plus, Edit, Trash2, Package, Minus, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { z } from "zod";
 
 const productSchema = z.object({
@@ -62,6 +63,15 @@ const Inventory = () => {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [stockAction, setStockAction] = useState<"add" | "deduct" | "sell">("add");
+  const [stockAdjustment, setStockAdjustment] = useState({
+    quantity: "",
+    reason: "",
+    unitPrice: "", // For sales
+    notes: "",
+  });
   const [newProduct, setNewProduct] = useState<{
     name: string;
     sku: string;
@@ -91,6 +101,26 @@ const Inventory = () => {
   useEffect(() => {
     fetchProducts();
     fetchSuppliers();
+    
+    // Set up real-time subscription for products
+    const channel = supabase
+      .channel('product-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products'
+        },
+        () => {
+          fetchProducts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchProducts = async () => {
@@ -219,6 +249,120 @@ const Inventory = () => {
         toast.error("You don't have permission to delete this product.");
       } else {
         toast.error("Unable to delete product. Please try again.");
+      }
+    }
+  };
+
+  const openStockDialog = (product: Product, action: "add" | "deduct" | "sell") => {
+    setSelectedProduct(product);
+    setStockAction(action);
+    setStockAdjustment({
+      quantity: "",
+      reason: "",
+      unitPrice: action === "sell" ? product.selling_price.toString() : "",
+      notes: "",
+    });
+    setIsStockDialogOpen(true);
+  };
+
+  const handleStockAdjustment = async () => {
+    if (!selectedProduct) return;
+
+    const quantity = parseFloat(stockAdjustment.quantity);
+    
+    // Validation
+    if (isNaN(quantity) || quantity <= 0) {
+      toast.error("Please enter a valid positive quantity.");
+      return;
+    }
+
+    // Check if deduction would result in negative stock
+    if ((stockAction === "deduct" || stockAction === "sell") && quantity > selectedProduct.current_stock) {
+      toast.error(`Cannot ${stockAction} ${quantity} units. Only ${selectedProduct.current_stock} units available in stock.`);
+      return;
+    }
+
+    if (stockAction === "sell") {
+      const unitPrice = parseFloat(stockAdjustment.unitPrice);
+      if (isNaN(unitPrice) || unitPrice <= 0) {
+        toast.error("Please enter a valid selling price.");
+        return;
+      }
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to adjust stock.");
+        return;
+      }
+
+      // Calculate new stock level
+      const newStock = stockAction === "add" 
+        ? selectedProduct.current_stock + quantity 
+        : selectedProduct.current_stock - quantity;
+
+      // Update product stock
+      const { error: updateError } = await supabase
+        .from("products")
+        .update({ current_stock: newStock })
+        .eq("id", selectedProduct.id)
+        .eq("user_id", user.id);
+
+      if (updateError) throw updateError;
+
+      // Record stock adjustment
+      const { error: adjustmentError } = await supabase
+        .from("stock_adjustments")
+        .insert({
+          product_id: selectedProduct.id,
+          quantity: stockAction === "add" ? quantity : -quantity,
+          adjustment_type: stockAction === "sell" ? "sale" : stockAction,
+          reason: stockAdjustment.reason || (stockAction === "add" ? "Stock received" : stockAction === "sell" ? "Sale" : "Stock removed"),
+          adjusted_by: user.id,
+        });
+
+      if (adjustmentError) throw adjustmentError;
+
+      // If this is a sale, record transaction
+      if (stockAction === "sell") {
+        const unitPrice = parseFloat(stockAdjustment.unitPrice);
+        const totalAmount = quantity * unitPrice;
+        const profit = (unitPrice - selectedProduct.cost_price) * quantity;
+
+        const { error: transactionError } = await supabase
+          .from("transactions")
+          .insert({
+            product_id: selectedProduct.id,
+            quantity: quantity,
+            unit_price: unitPrice,
+            cost_price: selectedProduct.cost_price,
+            total_amount: totalAmount,
+            profit: profit,
+            notes: stockAdjustment.notes || null,
+            created_by: user.id,
+          });
+
+        if (transactionError) throw transactionError;
+      }
+
+      const actionText = stockAction === "add" ? "added to" : stockAction === "sell" ? "sold from" : "removed from";
+      toast.success(`${quantity} units ${actionText} ${selectedProduct.name} successfully!`);
+      
+      setIsStockDialogOpen(false);
+      setSelectedProduct(null);
+      setStockAdjustment({ quantity: "", reason: "", unitPrice: "", notes: "" });
+      fetchProducts();
+    } catch (error: any) {
+      console.error("Error adjusting stock:", error);
+      const errorMsg = error.message || "";
+      
+      if (errorMsg.includes("permission") || errorMsg.includes("row-level security")) {
+        toast.error("You don't have permission to modify this product's stock.");
+      } else if (errorMsg.includes("foreign key")) {
+        toast.error("This product no longer exists. Please refresh the page.");
+      } else {
+        toast.error(`Unable to ${stockAction} stock. Please try again.`);
       }
     }
   };
@@ -515,7 +659,34 @@ const Inventory = () => {
                       <span className="text-muted-foreground">N/A</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openStockDialog(product, "add")}
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      <ArrowUpCircle className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openStockDialog(product, "deduct")}
+                      className="text-orange-600 hover:text-orange-700"
+                    >
+                      <Minus className="h-4 w-4 mr-1" />
+                      Deduct
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openStockDialog(product, "sell")}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <ArrowDownCircle className="h-4 w-4 mr-1" />
+                      Sell
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -530,6 +701,152 @@ const Inventory = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* Stock Adjustment Dialog */}
+      <Dialog open={isStockDialogOpen} onOpenChange={setIsStockDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {stockAction === "add" && "Add Stock"}
+              {stockAction === "deduct" && "Deduct Stock"}
+              {stockAction === "sell" && "Record Sale"}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedProduct && (
+                <>
+                  <div className="font-medium text-foreground mt-2">
+                    {selectedProduct.name} ({selectedProduct.sku})
+                  </div>
+                  <div className="text-sm mt-1">
+                    Current Stock: <span className="font-semibold">{selectedProduct.current_stock} {selectedProduct.unit_of_measure}</span>
+                  </div>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="quantity">
+                Quantity ({selectedProduct?.unit_of_measure})
+                <span className="text-destructive"> *</span>
+              </Label>
+              <Input
+                id="quantity"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="Enter quantity"
+                value={stockAdjustment.quantity}
+                onChange={(e) =>
+                  setStockAdjustment({ ...stockAdjustment, quantity: e.target.value })
+                }
+                required
+              />
+            </div>
+
+            {stockAction === "sell" && (
+              <div className="space-y-2">
+                <Label htmlFor="unitPrice">
+                  Selling Price per Unit (₱)
+                  <span className="text-destructive"> *</span>
+                </Label>
+                <Input
+                  id="unitPrice"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="Enter price"
+                  value={stockAdjustment.unitPrice}
+                  onChange={(e) =>
+                    setStockAdjustment({ ...stockAdjustment, unitPrice: e.target.value })
+                  }
+                  required
+                />
+                {selectedProduct && stockAdjustment.quantity && stockAdjustment.unitPrice && (
+                  <div className="text-sm space-y-1 mt-2 p-3 bg-muted rounded-md">
+                    <div className="flex justify-between">
+                      <span>Total Amount:</span>
+                      <span className="font-semibold">
+                        ₱{(parseFloat(stockAdjustment.quantity) * parseFloat(stockAdjustment.unitPrice)).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Profit:</span>
+                      <span className={`font-semibold ${
+                        (parseFloat(stockAdjustment.unitPrice) - selectedProduct.cost_price) >= 0 
+                          ? 'text-green-600' 
+                          : 'text-red-600'
+                      }`}>
+                        ₱{((parseFloat(stockAdjustment.unitPrice) - selectedProduct.cost_price) * parseFloat(stockAdjustment.quantity)).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason</Label>
+              <Input
+                id="reason"
+                type="text"
+                placeholder={
+                  stockAction === "add" 
+                    ? "e.g., New shipment" 
+                    : stockAction === "sell"
+                    ? "e.g., Customer name or order ID"
+                    : "e.g., Damaged goods"
+                }
+                value={stockAdjustment.reason}
+                onChange={(e) =>
+                  setStockAdjustment({ ...stockAdjustment, reason: e.target.value })
+                }
+                maxLength={200}
+              />
+            </div>
+
+            {stockAction === "sell" && (
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Additional transaction notes (optional)"
+                  value={stockAdjustment.notes}
+                  onChange={(e) =>
+                    setStockAdjustment({ ...stockAdjustment, notes: e.target.value })
+                  }
+                  maxLength={500}
+                  rows={3}
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsStockDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleStockAdjustment}
+              className={
+                stockAction === "add"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : stockAction === "sell"
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : ""
+              }
+            >
+              {stockAction === "add" && "Add Stock"}
+              {stockAction === "deduct" && "Deduct Stock"}
+              {stockAction === "sell" && "Record Sale"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
