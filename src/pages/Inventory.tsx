@@ -104,7 +104,7 @@ const Inventory = () => {
       setProducts(data || []);
     } catch (error) {
       console.error("Error fetching products:", error);
-      toast.error("Failed to load products");
+      toast.error("Unable to load products. Please refresh the page or check your internet connection.");
     } finally {
       setLoading(false);
     }
@@ -186,7 +186,18 @@ const Inventory = () => {
       fetchProducts();
     } catch (error: any) {
       console.error("Error adding product:", error);
-      toast.error(error.message || "Failed to add product");
+      const errorMsg = error.message || "";
+      
+      // Provide specific guidance based on error
+      if (errorMsg.includes("duplicate key") || errorMsg.includes("unique constraint")) {
+        toast.error("A product with this SKU already exists in your inventory. Please use a different SKU.");
+      } else if (errorMsg.includes("violates row-level security")) {
+        toast.error("You don't have permission to add products. Please log in again.");
+      } else if (errorMsg.includes("null value")) {
+        toast.error("Please fill in all required fields (Name, SKU, Category, Prices).");
+      } else {
+        toast.error("Unable to add product. Please check all fields and try again.");
+      }
     }
   };
 
@@ -200,7 +211,15 @@ const Inventory = () => {
       fetchProducts();
     } catch (error: any) {
       console.error("Error deleting product:", error);
-      toast.error(error.message || "Failed to delete product");
+      const errorMsg = error.message || "";
+      
+      if (errorMsg.includes("foreign key")) {
+        toast.error("Cannot delete this product because it has associated transactions or pricing logs. Please remove those first.");
+      } else if (errorMsg.includes("permission")) {
+        toast.error("You don't have permission to delete this product.");
+      } else {
+        toast.error("Unable to delete product. Please try again.");
+      }
     }
   };
 

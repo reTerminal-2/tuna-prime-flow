@@ -79,7 +79,7 @@ function AppSidebar() {
       // Navigation will be handled by onAuthStateChange
     } catch (error) {
       console.error("Logout error:", error);
-      toast.error("Logout failed");
+      toast.error("Unable to log out. Please try closing and reopening the app.");
     } finally {
       setIsLoggingOut(false);
     }
