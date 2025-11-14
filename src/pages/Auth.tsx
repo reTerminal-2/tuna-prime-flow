@@ -7,17 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Fish } from "lucide-react";
+import { Fish, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 
 // Validation schemas
@@ -47,12 +38,6 @@ const signupSchema = z.object({
     .max(100, "Password must be less than 100 characters"),
 });
 
-const resetEmailSchema = z.string()
-  .trim()
-  .min(1, "Email is required")
-  .email("Invalid email address")
-  .max(255, "Email must be less than 255 characters");
-
 const REMEMBER_ME_KEY = "tuna_inventory_remember_email";
 
 const Auth = () => {
@@ -62,9 +47,8 @@ const Auth = () => {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({ email: "", password: "", fullName: "" });
   const [rememberMe, setRememberMe] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [isResetting, setIsResetting] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const hasNavigatedRef = useRef(false);
 
   // Load saved email on mount
@@ -200,59 +184,6 @@ const Auth = () => {
     }
   };
 
-  const handleForgotPassword = async () => {
-    // Validate email
-    try {
-      resetEmailSchema.parse(resetEmail);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast.error(error.errors[0].message);
-        return;
-      }
-    }
-
-    setIsResetting(true);
-
-    try {
-      const redirectUrl = `${window.location.origin}/auth?reset=true`;
-      
-      // Request password reset from Supabase
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        resetEmail.trim(),
-        {
-          redirectTo: redirectUrl,
-        }
-      );
-
-      if (error) throw error;
-
-      // Send email via edge function
-      try {
-        const { error: emailError } = await supabase.functions.invoke('send-password-reset', {
-          body: {
-            email: resetEmail.trim(),
-            resetLink: redirectUrl,
-          }
-        });
-
-        if (emailError) {
-          console.error("Email sending error:", emailError);
-          // Don't throw - Supabase already sent a reset email
-        }
-      } catch (emailError) {
-        console.error("Edge function error:", emailError);
-        // Continue - Supabase's default email was sent
-      }
-
-      toast.success("Password reset email sent! Check your inbox.");
-      setShowForgotPassword(false);
-      setResetEmail("");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to send reset email");
-    } finally {
-      setIsResetting(false);
-    }
-  };
 
   if (isCheckingAuth) {
     return null;
@@ -296,16 +227,33 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    required
-                    maxLength={100}
-                    autoComplete="current-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="login-password"
+                      type={showLoginPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={loginData.password}
+                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                      required
+                      maxLength={100}
+                      autoComplete="current-password"
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                    >
+                      {showLoginPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -323,57 +271,6 @@ const Auth = () => {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Logging in..." : "Log In"}
                 </Button>
-                <div className="text-center mt-2">
-                  <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
-                    <DialogTrigger asChild>
-                      <Button variant="link" className="text-sm text-muted-foreground hover:text-primary p-0 h-auto">
-                        Forgot password?
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-[90vw] sm:max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Reset Password</DialogTitle>
-                        <DialogDescription>
-                          Enter your email address and we'll send you a link to reset your password.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="reset-email">Email</Label>
-                          <Input
-                            id="reset-email"
-                            type="email"
-                            placeholder="Enter your email"
-                            value={resetEmail}
-                            onChange={(e) => setResetEmail(e.target.value)}
-                            maxLength={255}
-                            autoComplete="email"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter className="flex-col sm:flex-row gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setShowForgotPassword(false);
-                            setResetEmail("");
-                          }}
-                          disabled={isResetting}
-                          className="w-full sm:w-auto"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={handleForgotPassword}
-                          disabled={isResetting || !resetEmail}
-                          className="w-full sm:w-auto"
-                        >
-                          {isResetting ? "Sending..." : "Send Reset Link"}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
               </form>
             </TabsContent>
             
@@ -407,17 +304,34 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Create a password (min 6 characters)"
-                    value={signupData.password}
-                    onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                    required
-                    minLength={6}
-                    maxLength={100}
-                    autoComplete="new-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="signup-password"
+                      type={showSignupPassword ? "text" : "password"}
+                      placeholder="Create a password (min 6 characters)"
+                      value={signupData.password}
+                      onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                      required
+                      minLength={6}
+                      maxLength={100}
+                      autoComplete="new-password"
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                      aria-label={showSignupPassword ? "Hide password" : "Show password"}
+                    >
+                      {showSignupPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create Account"}
