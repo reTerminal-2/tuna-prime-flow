@@ -147,12 +147,19 @@ const Pricing = () => {
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to create pricing rules");
+        return;
+      }
+
       const ruleData: any = {
         name: newRule.name,
         rule_type: newRule.rule_type as "expiration_based" | "age_based" | "demand_based",
         is_active: true,
         priority: parseInt(newRule.priority),
         price_adjustment_percent: parseFloat(newRule.price_adjustment_percent),
+        user_id: user.id,
       };
 
       if (newRule.description) {
@@ -239,13 +246,17 @@ const Pricing = () => {
             .eq("id", product.id);
 
           if (!updateError) {
-            await supabase.from("pricing_logs").insert({
-              product_id: product.id,
-              old_price: product.selling_price,
-              new_price: newPrice,
-              rule_id: appliedRule.id,
-              reason: `Applied rule: ${appliedRule.name}`,
-            });
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await supabase.from("pricing_logs").insert({
+                product_id: product.id,
+                old_price: product.selling_price,
+                new_price: newPrice,
+                rule_id: appliedRule.id,
+                reason: `Applied rule: ${appliedRule.name}`,
+                user_id: user.id,
+              });
+            }
             updatedCount++;
           }
         }

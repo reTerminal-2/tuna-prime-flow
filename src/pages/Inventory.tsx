@@ -143,6 +143,12 @@ const Inventory = () => {
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to add products");
+        return;
+      }
+
       const { error } = await supabase.from("products").insert([
         {
           name: validationResult.data.name,
@@ -156,6 +162,7 @@ const Inventory = () => {
           reorder_level: validationResult.data.reorder_level,
           supplier_id: newProduct.supplier_id || null,
           expiration_date: newProduct.expiration_date || null,
+          user_id: user.id,
         },
       ]);
 
