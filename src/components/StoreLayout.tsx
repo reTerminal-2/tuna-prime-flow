@@ -62,9 +62,9 @@ const StoreLayout = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 font-bold text-xl text-primary">
             <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
-              <span className="text-white">N</span>
+              <span className="text-white">T</span>
             </div>
-            <span className="hidden sm:inline-block">Nenita's Online Tuna Shop</span>
+            <span className="hidden sm:inline-block">TunaFlow</span>
           </Link>
 
           {/* Search Bar - Desktop */}
@@ -95,9 +95,9 @@ const StoreLayout = () => {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="sm:hidden"
               onClick={() => setIsSearchOpen(true)}
             >
@@ -163,7 +163,7 @@ const StoreLayout = () => {
       {/* Footer */}
       <footer className="bg-white border-t py-8 mt-auto">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; 2026 Nenita's Online Tuna Shop. All rights reserved.</p>
+          <p>&copy; 2026 TunaFlow. All rights reserved.</p>
         </div>
       </footer>
     </div>
