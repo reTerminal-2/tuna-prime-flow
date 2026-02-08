@@ -12,3 +12,6 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+# Replace with your actual domain
+Sitemap: http://YOUR_DOMAIN.com/sitemap.xml
