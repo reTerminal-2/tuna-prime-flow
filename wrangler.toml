@@ -1,0 +1,9 @@
+name = "tuna-flow"
+compatibility_date = "2024-02-09"
+pages_build_output_dir = "dist"
+
+[site]
+bucket = "./dist"
+
+[dev]
+port = 8788

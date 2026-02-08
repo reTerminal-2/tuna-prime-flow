@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -15,8 +17,9 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Trash2, Users as UsersIcon } from "lucide-react";
+import { Plus, Trash2, Users as UsersIcon, Sparkles, Truck, Award } from "lucide-react";
 import { z } from "zod";
+import { aiService, SupplierScore } from "@/services/aiService";
 
 const supplierSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -39,6 +42,7 @@ interface Supplier {
 
 const Suppliers = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierScores, setSupplierScores] = useState<SupplierScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newSupplier, setNewSupplier] = useState({
@@ -53,6 +57,14 @@ const Suppliers = () => {
   useEffect(() => {
     fetchSuppliers();
   }, []);
+
+  useEffect(() => {
+    if (suppliers.length > 0) {
+      aiService.rateSuppliers(suppliers)
+        .then(scores => setSupplierScores(scores))
+        .catch(err => console.error("Failed to rate suppliers", err));
+    }
+  }, [suppliers]);
 
   const fetchSuppliers = async () => {
     try {
@@ -123,7 +135,7 @@ const Suppliers = () => {
     } catch (error: any) {
       console.error("Error adding supplier:", error);
       const errorMsg = error.message || "";
-      
+
       if (errorMsg.includes("duplicate key") || errorMsg.includes("already exists")) {
         toast.error("A supplier with this name already exists. Please use a different name.");
       } else if (errorMsg.includes("violates row-level security")) {
@@ -147,7 +159,7 @@ const Suppliers = () => {
     } catch (error: any) {
       console.error("Error deleting supplier:", error);
       const errorMsg = error.message || "";
-      
+
       if (errorMsg.includes("foreign key") || errorMsg.includes("still referenced")) {
         toast.error("Cannot delete this supplier because some products are linked to them. Please update or remove those products first.");
       } else if (errorMsg.includes("permission")) {
@@ -167,6 +179,8 @@ const Suppliers = () => {
       </div>
     );
   }
+
+  const getScore = (id: string) => supplierScores.find(s => s.supplierId === id);
 
   return (
     <div className="p-6 space-y-6">
@@ -289,51 +303,104 @@ const Suppliers = () => {
             </CardContent>
           </Card>
         ) : (
-          suppliers.map((supplier) => (
-            <Card key={supplier.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{supplier.name}</span>
+          suppliers.map((supplier) => {
+            const score = getScore(supplier.id);
+            return (
+              <Card key={supplier.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>{supplier.name}</span>
+                    <div className="flex items-center gap-2">
+                      {score && (
+                        <Badge variant={
+                          score.grade === 'Platinum' ? 'default' :
+                            score.grade === 'Gold' ? 'secondary' :
+                              'outline'
+                        } className="flex items-center gap-1">
+                          <Award className="h-3 w-3" />
+                          {score.grade}
+                        </Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteSupplier(supplier.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardTitle>
+                  {supplier.contact_person && (
+                    <CardDescription>{supplier.contact_person}</CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  {/* AI Score Section */}
+                  {score && (
+                    <div className="bg-muted/50 p-3 rounded-md space-y-2">
+                      <div className="flex justify-between items-center text-xs font-medium text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" /> AI Reliability Score
+                        </span>
+                        <span>{score.score}/100</span>
+                      </div>
+                      <Progress value={score.score} className="h-2" />
+                      <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground pt-1">
+                        <div className="text-center">
+                          <div className="font-semibold text-foreground">{score.speed}%</div>
+                          Speed
+                        </div>
+                        <div className="text-center">
+                          <div className="font-semibold text-foreground">{score.quality}%</div>
+                          Quality
+                        </div>
+                        <div className="text-center">
+                          <div className="font-semibold text-foreground">{score.reliability}%</div>
+                          Reliability
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {supplier.email && (
+                      <div>
+                        <span className="text-muted-foreground">Email: </span>
+                        <span>{supplier.email}</span>
+                      </div>
+                    )}
+                    {supplier.phone && (
+                      <div>
+                        <span className="text-muted-foreground">Phone: </span>
+                        <span>{supplier.phone}</span>
+                      </div>
+                    )}
+                    {supplier.address && (
+                      <div>
+                        <span className="text-muted-foreground">Address: </span>
+                        <span>{supplier.address}</span>
+                      </div>
+                    )}
+                    {supplier.notes && (
+                      <div className="pt-2 border-t">
+                        <span className="text-muted-foreground">Notes: </span>
+                        <p className="text-muted-foreground">{supplier.notes}</p>
+                      </div>
+                    )}
+                  </div>
+
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteSupplier(supplier.id)}
+                    className="w-full mt-2"
+                    variant="outline"
+                    onClick={() => toast.success(`Auto-drafting Purchase Order for ${supplier.name}...`)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Truck className="h-4 w-4 mr-2" />
+                    Auto-Draft PO
                   </Button>
-                </CardTitle>
-                {supplier.contact_person && (
-                  <CardDescription>{supplier.contact_person}</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {supplier.email && (
-                  <div>
-                    <span className="text-muted-foreground">Email: </span>
-                    <span>{supplier.email}</span>
-                  </div>
-                )}
-                {supplier.phone && (
-                  <div>
-                    <span className="text-muted-foreground">Phone: </span>
-                    <span>{supplier.phone}</span>
-                  </div>
-                )}
-                {supplier.address && (
-                  <div>
-                    <span className="text-muted-foreground">Address: </span>
-                    <span>{supplier.address}</span>
-                  </div>
-                )}
-                {supplier.notes && (
-                  <div className="pt-2 border-t">
-                    <span className="text-muted-foreground">Notes: </span>
-                    <p className="text-muted-foreground">{supplier.notes}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
     </div>

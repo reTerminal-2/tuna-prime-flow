@@ -1,8 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, TrendingUp, DollarSign, Package } from "lucide-react";
+import { BarChart3, TrendingUp, Package, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { aiService } from "@/services/aiService";
 
 interface ReportData {
   totalSales: number;
@@ -24,11 +25,26 @@ const Reports = () => {
     salesByCategory: [],
     profitTrend: []
   });
+  const [aiSummary, setAiSummary] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchReportData();
   }, []);
+
+  useEffect(() => {
+    if (reportData.totalSales > 0 || reportData.totalProfit > 0) {
+      const topProduct = reportData.salesByCategory.length > 0 ? reportData.salesByCategory[0].name : "N/A";
+      // Estimate total orders from sales (mock average order value of 500)
+      const totalOrders = Math.floor(reportData.totalSales / 500); 
+      
+      setAiSummary(aiService.generateReportSummary({
+        totalSales: reportData.totalSales,
+        totalOrders,
+        topProduct
+      }));
+    }
+  }, [reportData]);
 
   const fetchReportData = async () => {
     try {
@@ -116,6 +132,25 @@ const Reports = () => {
           View performance insights and analytics
         </p>
       </div>
+
+      {/* AI Executive Summary */}
+      {aiSummary && (
+        <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2 text-indigo-900">
+              <Sparkles className="h-5 w-5 text-indigo-600" />
+              AI Executive Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-indigo-800 leading-relaxed whitespace-pre-wrap">
+              {aiSummary.split('**').map((part, i) => 
+                i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>

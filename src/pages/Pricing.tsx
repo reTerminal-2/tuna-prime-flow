@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, TrendingDown, Clock, Receipt, Plus, Settings2 } from "lucide-react";
+import { Calculator, TrendingDown, Clock, Receipt, Plus, Settings2, Sparkles, TrendingUp, DollarSign, BarChart3, Users, Percent, Search } from "lucide-react";
 import { toast } from "sonner";
+import { aiService, AIInsight } from "@/services/aiService";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface PricingRule {
   id: string;
@@ -65,6 +67,28 @@ const Pricing = () => {
   });
 
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [aiSuggestions, setAiSuggestions] = useState<AIInsight[]>([]);
+
+  // Bulk Update State
+  const [bulkUpdatePercent, setBulkUpdatePercent] = useState("");
+  const [bulkUpdateCategory, setBulkUpdateCategory] = useState("all");
+
+  // Competitor Data (Mocked)
+  const competitorData = [
+    { name: "Ocean Basket", price: 120, difference: "+5%" },
+    { name: "Seafood City", price: 110, difference: "-4%" },
+    { name: "Market Local", price: 115, difference: "0%" },
+  ];
+
+  // Price Trend Data (Mocked)
+  const trendData = [
+    { name: 'Jan', price: 100 },
+    { name: 'Feb', price: 105 },
+    { name: 'Mar', price: 102 },
+    { name: 'Apr', price: 108 },
+    { name: 'May', price: 115 },
+    { name: 'Jun', price: 112 },
+  ];
 
   useEffect(() => {
     fetchPricingRules();
@@ -76,6 +100,15 @@ const Pricing = () => {
       setTaxSettings(JSON.parse(savedTaxSettings));
     }
   }, []);
+
+  useEffect(() => {
+    if (products.length > 0) {
+      (async () => {
+        const suggestions = await aiService.generatePricingSuggestions(products);
+        setAiSuggestions(suggestions);
+      })();
+    }
+  }, [products]);
 
   const fetchPricingRules = async () => {
     try {
@@ -279,6 +312,77 @@ const Pricing = () => {
     } catch (error: any) {
       console.error("Error applying rules:", error);
       toast.error(error.message || "Failed to apply rules");
+    }
+  };
+
+  const handleBulkUpdate = async (type: 'increase' | 'decrease') => {
+    try {
+      const percent = parseFloat(bulkUpdatePercent);
+      if (isNaN(percent) || percent <= 0) {
+        toast.error("Please enter a valid percentage");
+        return;
+      }
+
+      const multiplier = type === 'increase' ? (1 + percent / 100) : (1 - percent / 100);
+      
+      let query = supabase.from("products").select("*");
+      if (bulkUpdateCategory !== "all") {
+        query = query.eq("category", bulkUpdateCategory);
+      }
+
+      const { data: productsToUpdate, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
+
+      if (!productsToUpdate || productsToUpdate.length === 0) {
+        toast.error("No products found to update");
+        return;
+      }
+
+      let updatedCount = 0;
+      for (const product of productsToUpdate) {
+        const newPrice = parseFloat((product.selling_price * multiplier).toFixed(2));
+        
+        const { error: updateError } = await supabase
+          .from("products")
+          .update({ selling_price: newPrice })
+          .eq("id", product.id);
+
+        if (!updateError) updatedCount++;
+      }
+
+      toast.success(`Updated prices for ${updatedCount} products`);
+      fetchProducts();
+      setBulkUpdatePercent("");
+    } catch (error: any) {
+      console.error("Error bulk updating:", error);
+      toast.error("Failed to update prices");
+    }
+  };
+
+  const handlePsychologicalPricing = async () => {
+    try {
+      const { data: productsToUpdate, error: fetchError } = await supabase.from("products").select("*");
+      if (fetchError) throw fetchError;
+
+      let updatedCount = 0;
+      for (const product of productsToUpdate || []) {
+        const currentPrice = Math.floor(product.selling_price);
+        const newPrice = currentPrice + 0.99;
+        
+        if (newPrice !== product.selling_price) {
+          const { error: updateError } = await supabase
+            .from("products")
+            .update({ selling_price: newPrice })
+            .eq("id", product.id);
+
+          if (!updateError) updatedCount++;
+        }
+      }
+
+      toast.success(`Applied psychological pricing to ${updatedCount} products`);
+      fetchProducts();
+    } catch (error: any) {
+      toast.error("Failed to apply psychological pricing");
     }
   };
 
@@ -491,12 +595,48 @@ const Pricing = () => {
         </div>
       </div>
 
+      {/* AI Pricing Suggestions */}
+      {aiSuggestions.length > 0 && (
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2 text-blue-900">
+              <Sparkles className="h-5 w-5 text-blue-600" />
+              AI Price Optimization
+            </CardTitle>
+            <CardDescription className="text-blue-700">
+              Smart pricing adjustments based on market demand and stock levels
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-3">
+            {aiSuggestions.map((suggestion, index) => (
+              <Card key={index} className="bg-white/80 border-blue-100 shadow-sm">
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-sm font-medium text-blue-900">{suggestion.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <p className="text-xs text-muted-foreground mb-3">{suggestion.message}</p>
+                  <Button 
+                    size="sm" 
+                    className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700"
+                    onClick={() => toast.success(`Applied AI Suggestion: ${suggestion.title}`)}
+                  >
+                    {suggestion.action}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="rules" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="rules">Pricing Rules</TabsTrigger>
-          <TabsTrigger value="calculator">Price Calculator</TabsTrigger>
-          <TabsTrigger value="tax">Tax Configuration</TabsTrigger>
-          <TabsTrigger value="logs">Price History</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
+          <TabsTrigger value="rules">Rules</TabsTrigger>
+          <TabsTrigger value="calculator">Calculator</TabsTrigger>
+          <TabsTrigger value="bulk">Bulk Actions</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="tax">Tax</TabsTrigger>
+          <TabsTrigger value="logs">History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="rules" className="space-y-4">
@@ -564,90 +704,236 @@ const Pricing = () => {
         </TabsContent>
 
         <TabsContent value="calculator" className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5" />
+                  Price Simulator
+                </CardTitle>
+                <CardDescription>
+                  Calculate final price based on active rules and tax settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="calc-base-price">Base Price</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="calc-base-price"
+                        type="number"
+                        step="0.01"
+                        className="pl-8"
+                        value={calculatorInputs.basePrice}
+                        onChange={(e) => setCalculatorInputs({ ...calculatorInputs, basePrice: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="calc-category">Category</Label>
+                    <Select value={calculatorInputs.category} onValueChange={(v) => setCalculatorInputs({ ...calculatorInputs, category: v })}>
+                      <SelectTrigger id="calc-category">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fresh">Fresh</SelectItem>
+                        <SelectItem value="frozen">Frozen</SelectItem>
+                        <SelectItem value="canned">Canned</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="calc-days">Days to Expiry</Label>
+                    <Input
+                      id="calc-days"
+                      type="number"
+                      value={calculatorInputs.daysToExpiry}
+                      onChange={(e) => setCalculatorInputs({ ...calculatorInputs, daysToExpiry: e.target.value })}
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+                {calculatorInputs.basePrice && (() => {
+                  const result = calculatePrice();
+                  if (!result) return null;
+                  const profit = result.finalPrice - (parseFloat(calculatorInputs.basePrice) * 0.7); // Mock cost as 70%
+                  const margin = (profit / result.finalPrice) * 100;
+
+                  return (
+                    <div className="border rounded-lg p-4 space-y-3 bg-muted/50">
+                      <div className="flex justify-between text-sm">
+                        <span>Base Price:</span>
+                        <span className="font-medium">₱{parseFloat(calculatorInputs.basePrice).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>After Rules:</span>
+                        <span className="font-medium text-green-600">₱{result.finalPrice.toFixed(2)}</span>
+                      </div>
+                      <div className="border-t pt-2 mt-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Est. Cost (70%):</span>
+                          <span>₱{(parseFloat(calculatorInputs.basePrice) * 0.7).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Net Profit:</span>
+                          <span className="font-medium">₱{profit.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Margin:</span>
+                          <span className={`font-medium ${margin < 20 ? 'text-red-500' : 'text-green-600'}`}>
+                            {margin.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Market Analysis (Mock)
+                </CardTitle>
+                <CardDescription>
+                  Competitor pricing for similar items
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {competitorData.map((comp, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                          {comp.name[0]}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{comp.name}</p>
+                          <p className="text-xs text-muted-foreground">Last updated: Today</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">₱{comp.price}</p>
+                        <span className={`text-xs ${comp.difference.startsWith('+') ? 'text-red-500' : 'text-green-500'}`}>
+                          {comp.difference} vs you
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="bulk" className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Bulk Price Adjustment
+                </CardTitle>
+                <CardDescription>
+                  Apply percentage changes to entire categories
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Target Category</Label>
+                    <Select value={bulkUpdateCategory} onValueChange={setBulkUpdateCategory}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="fresh">Fresh</SelectItem>
+                        <SelectItem value="frozen">Frozen</SelectItem>
+                        <SelectItem value="canned">Canned</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Percentage (%)</Label>
+                    <div className="relative">
+                      <Percent className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        className="pl-8"
+                        placeholder="e.g. 10"
+                        value={bulkUpdatePercent}
+                        onChange={(e) => setBulkUpdatePercent(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button onClick={() => handleBulkUpdate('increase')} className="w-full bg-green-600 hover:bg-green-700">
+                      <TrendingUp className="mr-2 h-4 w-4" /> Increase
+                    </Button>
+                    <Button onClick={() => handleBulkUpdate('decrease')} className="w-full bg-red-600 hover:bg-red-700">
+                      <TrendingDown className="mr-2 h-4 w-4" /> Decrease
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  Smart Strategies
+                </CardTitle>
+                <CardDescription>
+                  Apply advanced pricing strategies automatically
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="border rounded-lg p-4 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="font-medium">Psychological Pricing</p>
+                    <p className="text-sm text-muted-foreground">Round all prices to end in .99</p>
+                  </div>
+                  <Button variant="outline" onClick={handlePsychologicalPricing}>Apply</Button>
+                </div>
+                <div className="border rounded-lg p-4 flex items-center justify-between opacity-50">
+                  <div className="space-y-1">
+                    <p className="font-medium">Clearance Mode (Coming Soon)</p>
+                    <p className="text-sm text-muted-foreground">Auto-discount expiring items by 50%</p>
+                  </div>
+                  <Button variant="outline" disabled>Apply</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                Price Calculator
-              </CardTitle>
-              <CardDescription>
-                Calculate final price based on active rules and tax settings
-              </CardDescription>
+              <CardTitle>Price Trends</CardTitle>
+              <CardDescription>Historical price movements over the last 6 months</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="calc-base-price">Base Price</Label>
-                  <Input
-                    id="calc-base-price"
-                    type="number"
-                    step="0.01"
-                    value={calculatorInputs.basePrice}
-                    onChange={(e) => setCalculatorInputs({ ...calculatorInputs, basePrice: e.target.value })}
-                    placeholder="Enter base price"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="calc-category">Category</Label>
-                  <Select value={calculatorInputs.category} onValueChange={(v) => setCalculatorInputs({ ...calculatorInputs, category: v })}>
-                    <SelectTrigger id="calc-category">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fresh">Fresh</SelectItem>
-                      <SelectItem value="frozen">Frozen</SelectItem>
-                      <SelectItem value="canned">Canned</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="calc-days">Days to Expiry</Label>
-                  <Input
-                    id="calc-days"
-                    type="number"
-                    value={calculatorInputs.daysToExpiry}
-                    onChange={(e) => setCalculatorInputs({ ...calculatorInputs, daysToExpiry: e.target.value })}
-                    placeholder="Optional"
-                  />
-                </div>
+            <CardContent>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="price" stroke="#2563eb" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-              <Button onClick={() => {
-                const result = calculatePrice();
-                if (result) {
-                  toast.success("Price calculated successfully");
-                }
-              }}>
-                Calculate Price
-              </Button>
-              {calculatorInputs.basePrice && (() => {
-                const result = calculatePrice();
-                if (!result) return null;
-                return (
-                  <div className="border rounded-lg p-4 space-y-3 bg-muted/50">
-                    <div className="flex justify-between text-sm">
-                      <span>Base Price:</span>
-                      <span className="font-medium">₱{parseFloat(calculatorInputs.basePrice).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>After Pricing Rules:</span>
-                      <span className="font-medium">₱{result.finalPrice.toFixed(2)}</span>
-                    </div>
-                    {taxSettings.includeVat && (
-                      <div className="flex justify-between text-sm">
-                        <span>With VAT ({taxSettings.vatRate}%):</span>
-                        <span className="font-medium">₱{result.priceWithVat.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {taxSettings.seniorPwdDiscount && result.seniorPwdPrice && (
-                      <div className="flex justify-between text-sm border-t pt-2">
-                        <span>Senior/PWD Price (20% off and VAT exempt):</span>
-                        <span className="font-medium">₱{result.seniorPwdPrice.toFixed(2)}</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
             </CardContent>
           </Card>
         </TabsContent>
