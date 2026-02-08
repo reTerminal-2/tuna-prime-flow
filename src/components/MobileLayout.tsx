@@ -104,9 +104,7 @@ const MobileLayout = ({ children }: MobileLayoutProps) => {
                 {!isSearchOpen ? (
                     <>
                         <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
-                            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
-                                <Fish className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
-                            </div>
+                            <img src="/favicon.png" alt="TunaFlow Logo" className="h-8 w-8 object-contain" />
                             <span className="font-bold text-lg tracking-tight">TunaFlow</span>
                         </div>
                         <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-300">

@@ -61,9 +61,7 @@ const StoreLayout = () => {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 font-bold text-xl text-primary">
-            <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
-              <span className="text-white">T</span>
-            </div>
+            <img src="/favicon.png" alt="TunaFlow Logo" className="h-8 w-8 object-contain" />
             <span className="hidden sm:inline-block">TunaFlow</span>
           </Link>
 
