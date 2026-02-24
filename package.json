@@ -14,7 +14,8 @@
     "ai:auth": "copilot-api auth",
     "pages:dev": "wrangler pages dev dist",
     "pages:deploy": "wrangler pages deploy dist",
-    "deploy:ftp": "node scripts/upload-ftp.js"
+    "deploy:ftp": "node scripts/upload-ftp.js",
+    "deploy:ftp:auto": ".\\node_portable\\node.exe scripts/upload-ftp.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
