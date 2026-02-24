@@ -29,6 +29,7 @@ const Settings = () => {
 
   const [aiProvider, setAiProvider] = useState<'copilot-api' | 'gemini' | 'ernie' | 'gpt4free'>('gpt4free');
   const [g4fModel, setG4fModel] = useState('gpt-4o-mini');
+  const [g4fVmUrl, setG4fVmUrl] = useState('');
 
   useEffect(() => {
     fetchSettings();
@@ -37,6 +38,7 @@ const Settings = () => {
     setGeminiKey(localStorage.getItem("gemini_api_key") || "");
     setHfToken(localStorage.getItem("hf_token") || "");
     setG4fModel(localStorage.getItem("g4f_model") || 'gpt-4o-mini');
+    setG4fVmUrl(localStorage.getItem("g4f_vm_url") || "");
   }, []);
 
   const fetchSettings = async () => {
@@ -106,6 +108,8 @@ const Settings = () => {
       }
       if (aiProvider === 'gpt4free') {
         localStorage.setItem("g4f_model", g4fModel);
+        if (g4fVmUrl) localStorage.setItem("g4f_vm_url", g4fVmUrl);
+        else localStorage.removeItem("g4f_vm_url");
       }
 
       window.dispatchEvent(new Event("settingsChanged"));
@@ -264,6 +268,29 @@ const Settings = () => {
                 </Select>
                 <p className="text-sm text-muted-foreground">
                   All models are free. GPT-4o Mini is the most reliable for business tasks.
+                </p>
+              </div>
+            )}
+
+            {aiProvider === 'gpt4free' && (
+              <div className="space-y-2">
+                <Label>Custom Backend URL (Optional)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="http://localhost:6969"
+                    value={g4fVmUrl}
+                    onChange={(e) => setG4fVmUrl(e.target.value)}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setG4fVmUrl("http://localhost:6969")}
+                  >
+                    Use Local
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Leave empty to use public proxy. Set to <code>http://localhost:6969</code> if running the local proxy.
                 </p>
               </div>
             )}
