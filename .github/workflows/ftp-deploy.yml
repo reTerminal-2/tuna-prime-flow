@@ -34,5 +34,6 @@ jobs:
           server-dir: ./htdocs/
           state-name: .ftp-deploy-sync-state.json
           dry-run: false
+          dangerous-clean-slate: true # This will DELETE everything in the remote folder before uploading
           # InfinityFree can be slow and timeout, so we increase the timeout if possible
           # Note: The action doesn't have a direct timeout param, but we set state-name to track progress

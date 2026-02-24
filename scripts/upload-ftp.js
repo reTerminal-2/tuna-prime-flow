@@ -52,10 +52,10 @@ async function upload() {
 
         console.log(`Clearing remote ${remoteDir} folder...`);
         // We use ensureDir and then work inside it. 
-        // Note: clearing the working dir might be slow on InfinityFree.
         await client.ensureDir(remoteDir);
-        
-        console.log('Uploading dist folder contents...');
+        await client.clearWorkingDir(); // This deletes everything in the current directory
+
+        console.log('Uploading fresh dist folder contents...');
         await client.uploadFromDir("dist");
 
         console.log('Upload complete!');
