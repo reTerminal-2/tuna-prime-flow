@@ -277,20 +277,20 @@ const Settings = () => {
                 <Label>Custom Backend URL (Optional)</Label>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="http://localhost:6969"
+                    placeholder="http://localhost:8080"
                     value={g4fVmUrl}
                     onChange={(e) => setG4fVmUrl(e.target.value)}
                   />
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setG4fVmUrl("http://localhost:6969")}
+                    onClick={() => setG4fVmUrl("http://localhost:8080")}
                   >
                     Use Local
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Leave empty to use public proxy. Set to <code>http://localhost:6969</code> if running the local proxy.
+                  Leave empty to use public proxy. Set to <code>http://localhost:8080</code> if running the local proxy.
                 </p>
               </div>
             )}
