@@ -2,6 +2,17 @@
   command = "npm run build"
   publish = "dist"
 
+# Handle edge functions
+[[edge_functions]]
+  path = "/api/g4f"
+  function = "g4f-proxy"
+
+# API requests should NOT be handled by the SPA redirect
+[[redirects]]
+  from = "/api/g4f"
+  to = "/api/g4f"
+  status = 200
+
 # Redirect all routes to index.html for React Router SPA support
 [[redirects]]
   from = "/*"
