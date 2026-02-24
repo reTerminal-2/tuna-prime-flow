@@ -615,7 +615,7 @@ export const aiService = {
             if (provider === 'gpt4free') {
                 try {
                     const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
-                    const response = await fetch('https://api.g4f.dev/v1/chat/completions', {
+                    const response = await fetch('/api/g4f', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -919,7 +919,7 @@ export const aiService = {
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-                    const response = await fetch('https://api.g4f.dev/v1/chat/completions', {
+                    const response = await fetch('/api/g4f', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
