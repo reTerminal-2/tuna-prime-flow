@@ -36,3 +36,24 @@ To get started with development:
    ```bash
    npm run dev
    ```
+
+## Deployment
+
+This project is configured to automatically deploy to **InfinityFree** via GitHub Actions whenever changes are pushed to the `main` branch.
+
+### 1. GitHub Actions Setup
+To enable automatic deployment, you must add the following **Secrets** to your GitHub repository (`Settings > Secrets and variables > Actions`):
+
+| Secret Name | Value Example |
+|-------------|---------------|
+| `FTP_SERVER` | `ftpupload.net` |
+| `FTP_USERNAME` | `if0_41108542` |
+| `FTP_PASSWORD` | *(Your InfinityFree Password)* |
+
+### 2. Local Manual Deployment
+You can also deploy manually from your local machine:
+```bash
+npm run build
+npm run deploy:ftp
+```
+*Make sure your `.env` file contains the correct FTP credentials.*

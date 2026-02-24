@@ -27,8 +27,12 @@ jobs:
       - name: Sync files
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ftpupload.net
-          username: if0_41108542
+          server: ${{ secrets.FTP_SERVER || 'ftpupload.net' }}
+          username: ${{ secrets.FTP_USERNAME || 'if0_41108542' }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
           server-dir: ./htdocs/
+          state-name: .ftp-deploy-sync-state.json
+          dry-run: false
+          # InfinityFree can be slow and timeout, so we increase the timeout if possible
+          # Note: The action doesn't have a direct timeout param, but we set state-name to track progress
