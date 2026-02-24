@@ -914,12 +914,14 @@ export const aiService = {
             if (provider === 'gpt4free') {
                 const systemPrompt = aiService.generateSystemPrompt(message, context);
                 const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
+                const vmUrl = localStorage.getItem('g4f_vm_url'); // Priority for VM users
+                const endpoint = vmUrl ? `${vmUrl.replace(/\/$/, '')}/api/g4f` : '/api/g4f';
 
                 try {
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-                    const response = await fetch('/api/g4f', {
+                    const response = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
