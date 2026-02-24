@@ -6,8 +6,12 @@ import { runGranularSeeder, clearMockData } from "@/lib/mockDataSeeder";
 import {
     ShieldCheck, Database, LayoutDashboard, LogOut, Trash2, Play,
     Users, Package, ShoppingCart, TrendingUp, AlertTriangle,
-    DollarSign, Activity, BarChart3, Clock, Zap, Server, HardDrive
+    DollarSign, Activity, BarChart3, Clock, Zap, Server, HardDrive,
+    BrainCircuit, Save, Globe, Terminal
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { aiService } from "@/services/aiService";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
@@ -53,6 +57,15 @@ export default function SuperAdminDashboard() {
         pricingEngineRules: true
     });
 
+    // AI Configuration States
+    const [aiProvider, setAiProvider] = useState<string>('gpt4free');
+    const [g4fModel, setG4fModel] = useState('gpt-4o-mini');
+    const [g4fVmUrl, setG4fVmUrl] = useState('');
+    const [geminiKey, setGeminiKey] = useState("");
+    const [hfToken, setHfToken] = useState("");
+    const [testingAI, setTestingAI] = useState(false);
+    const [savingAI, setSavingAI] = useState(false);
+
     useEffect(() => {
         // Ensure dark mode
         document.documentElement.classList.add("dark");
@@ -70,6 +83,13 @@ export default function SuperAdminDashboard() {
         if (savedToggles) {
             setFeatureToggles(JSON.parse(savedToggles));
         }
+
+        // Load AI Settings
+        setAiProvider(localStorage.getItem("ai_provider") || 'gpt4free');
+        setG4fModel(localStorage.getItem("g4f_model") || 'gpt-4o-mini');
+        setG4fVmUrl(localStorage.getItem("g4f_vm_url") || "");
+        setGeminiKey(localStorage.getItem("gemini_api_key") || "");
+        setHfToken(localStorage.getItem("hf_token") || "");
 
         loadDashboardData();
     }, [navigate]);
@@ -152,6 +172,47 @@ export default function SuperAdminDashboard() {
         setFeatureToggles(newToggles);
         localStorage.setItem("superadmin_feature_toggles", JSON.stringify(newToggles));
         toast.success(`${key} ${value ? 'enabled' : 'disabled'}`);
+    };
+
+    const handleAISave = () => {
+        setSavingAI(true);
+        try {
+            localStorage.setItem("ai_provider", aiProvider);
+            localStorage.setItem("g4f_model", g4fModel);
+            localStorage.setItem("gemini_api_key", geminiKey);
+            localStorage.setItem("hf_token", hfToken);
+            if (g4fVmUrl) localStorage.setItem("g4f_vm_url", g4fVmUrl);
+            else localStorage.removeItem("g4f_vm_url");
+
+            // Dispatch event to update other components
+            window.dispatchEvent(new Event("settingsChanged"));
+            toast.success("AI Configuration updated for all users");
+        } catch (e) {
+            toast.error("Failed to save AI settings");
+        } finally {
+            setSavingAI(false);
+        }
+    };
+
+    const handleAITest = async () => {
+        setTestingAI(true);
+        try {
+            // Save current state first to ensure test uses current inputs
+            localStorage.setItem("ai_provider", aiProvider);
+            localStorage.setItem("g4f_model", g4fModel);
+            localStorage.setItem("gemini_api_key", geminiKey);
+
+            const result = await aiService.testConnection({});
+            if (result.success) {
+                toast.success(result.message);
+            } else {
+                toast.error(result.message);
+            }
+        } catch (e) {
+            toast.error("AI connection test failed");
+        } finally {
+            setTestingAI(false);
+        }
     };
 
     return (
@@ -531,6 +592,154 @@ export default function SuperAdminDashboard() {
                                     <span className="font-semibold">94%</span>
                                 </div>
                                 <Progress value={94} className="h-2" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* AI Configuration - NEW GLOBAL CONTROL */}
+                    <Card className="bg-card border-border lg:col-span-3 mt-6">
+                        <CardHeader className="border-b border-border/50">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <CardTitle className="flex items-center gap-2 text-primary">
+                                        <BrainCircuit className="w-6 h-6" />
+                                        Platform AI Configuration
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Configure the default AI provider for all sellers across the platform.
+                                    </CardDescription>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        disabled={testingAI}
+                                        onClick={handleAITest}
+                                        className="gap-2"
+                                    >
+                                        {testingAI ? "Testing..." : "Test Connection"}
+                                    </Button>
+                                    <Button
+                                        disabled={savingAI}
+                                        onClick={handleAISave}
+                                        className="gap-2 bg-primary hover:bg-primary/90"
+                                    >
+                                        <Save className="w-4 h-4" />
+                                        {savingAI ? "Saving..." : "Save Global Config"}
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium">Global AI Provider</Label>
+                                        <Select value={aiProvider} onValueChange={setAiProvider}>
+                                            <SelectTrigger className="bg-muted/30">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="gpt4free">🆓 GPT4Free (No Key Required)</SelectItem>
+                                                <SelectItem value="gemini">Google Gemini AI</SelectItem>
+                                                <SelectItem value="copilot-api">GitHub Copilot API</SelectItem>
+                                                <SelectItem value="ernie">ERNIE AI (Free)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <Globe className="w-3 h-3" />
+                                            This selection affects TunaBrain results for all seller dashboards.
+                                        </p>
+                                    </div>
+
+                                    {aiProvider === 'gpt4free' && (
+                                        <>
+                                            <div className="space-y-2 animate-in slide-in-from-left duration-300">
+                                                <Label className="text-sm font-medium">G4F Model Selection</Label>
+                                                <Select value={g4fModel} onValueChange={setG4fModel}>
+                                                    <SelectTrigger className="bg-muted/30">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fastest)</SelectItem>
+                                                        <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
+                                                        <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
+                                                        <SelectItem value="llama-3-70b">Llama 3 70B</SelectItem>
+                                                        <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2 animate-in slide-in-from-left duration-400">
+                                                <Label className="text-sm font-medium">Custom Backend (Optional VM)</Label>
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        placeholder="http://localhost:8080"
+                                                        value={g4fVmUrl}
+                                                        onChange={(e) => setG4fVmUrl(e.target.value)}
+                                                        className="bg-muted/30 font-mono text-xs"
+                                                    />
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setG4fVmUrl("http://localhost:8080")}
+                                                        className="text-[10px]"
+                                                    >
+                                                        Set Localhost
+                                                    </Button>
+                                                </div>
+                                                <p className="text-[10px] text-yellow-500/80 italic">
+                                                    Note: Using localhost requires the Node.js/Python backend to be running on the user's PC.
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {aiProvider === 'gemini' && (
+                                        <div className="space-y-2 animate-in slide-in-from-left duration-300">
+                                            <Label className="text-sm font-medium">Gemini API Key</Label>
+                                            <Input
+                                                type="password"
+                                                placeholder="AIzaSy..."
+                                                value={geminiKey}
+                                                onChange={(e) => setGeminiKey(e.target.value)}
+                                                className="bg-muted/30"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {aiProvider === 'ernie' && (
+                                        <div className="space-y-2 animate-in slide-in-from-left duration-300">
+                                            <Label className="text-sm font-medium">Hugging Face Token</Label>
+                                            <Input
+                                                type="password"
+                                                placeholder="hf_..."
+                                                value={hfToken}
+                                                onChange={(e) => setHfToken(e.target.value)}
+                                                className="bg-muted/30"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="bg-muted/20 rounded-xl p-5 border border-border/50">
+                                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                                        <Terminal className="w-4 h-4 text-primary" />
+                                        Configuration Guide
+                                    </h4>
+                                    <div className="space-y-4 text-xs text-muted-foreground">
+                                        <p>
+                                            <strong className="text-foreground">GPT4Free:</strong> Best for zero-cost operation. Uses public proxies. Unstable but completely free.
+                                        </p>
+                                        <p>
+                                            <strong className="text-foreground">Gemini AI:</strong> High reliability and speed. Requires a Google Cloud/AI Studio key.
+                                        </p>
+                                        <p>
+                                            <strong className="text-foreground">Local Proxy:</strong> If public endpoints are blocked by CORS, use the provided script in <code>/backend</code> to run a local bridge.
+                                        </p>
+                                        <div className="p-3 bg-primary/10 rounded border border-primary/20 text-primary-foreground/90 font-mono">
+                                            Default Port: 8080
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

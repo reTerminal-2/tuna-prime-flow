@@ -1,4 +1,4 @@
-import { Bell, Package, Palette, BrainCircuit } from "lucide-react";
+import { Bell, Package, Palette } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,11 +15,6 @@ const Settings = () => {
   const { theme, setTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [geminiKey, setGeminiKey] = useState("");
-  const [hfToken, setHfToken] = useState("");
-
-  // Settings State
   const [settings, setSettings] = useState({
     notify_low_stock: true,
     notify_expiring: true,
@@ -27,18 +22,8 @@ const Settings = () => {
     stock_alert_days: "7",
   });
 
-  const [aiProvider, setAiProvider] = useState<'copilot-api' | 'gemini' | 'ernie' | 'gpt4free'>('gpt4free');
-  const [g4fModel, setG4fModel] = useState('gpt-4o-mini');
-  const [g4fVmUrl, setG4fVmUrl] = useState('');
-
   useEffect(() => {
     fetchSettings();
-    const savedProvider = localStorage.getItem("ai_provider") || 'gpt4free';
-    setAiProvider(savedProvider as 'copilot-api' | 'gemini' | 'ernie' | 'gpt4free');
-    setGeminiKey(localStorage.getItem("gemini_api_key") || "");
-    setHfToken(localStorage.getItem("hf_token") || "");
-    setG4fModel(localStorage.getItem("g4f_model") || 'gpt-4o-mini');
-    setG4fVmUrl(localStorage.getItem("g4f_vm_url") || "");
   }, []);
 
   const fetchSettings = async () => {
@@ -47,24 +32,23 @@ const Settings = () => {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from("store_settings")
-        .select("*")
-        .eq("user_id", user.id)
+        .from('profiles')
+        .select('notification_preferences, stock_alert_days')
+        .eq('id', user.id)
         .single();
 
-      if (error && error.code !== "PGRST116") throw error;
+      if (error) throw error;
 
       if (data) {
         setSettings({
-          notify_low_stock: data.notify_low_stock,
-          notify_expiring: data.notify_expiring,
-          notify_new_order: data.notify_new_order,
-          stock_alert_days: String(data.stock_alert_days),
+          notify_low_stock: data.notification_preferences?.low_stock ?? true,
+          notify_expiring: data.notification_preferences?.expiring_items ?? true,
+          notify_new_order: data.notification_preferences?.new_orders ?? true,
+          stock_alert_days: data.stock_alert_days?.toString() || "7",
         });
       }
     } catch (error) {
-      console.error("Error fetching settings:", error);
-      toast.error("Failed to load settings");
+      console.error('Error fetching settings:', error);
     } finally {
       setLoading(false);
     }
@@ -74,67 +58,48 @@ const Settings = () => {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("You must be logged in to save settings");
-        return;
-      }
-
-      const updates = {
-        user_id: user.id,
-        notify_low_stock: settings.notify_low_stock,
-        notify_expiring: settings.notify_expiring,
-        notify_new_order: settings.notify_new_order,
-        stock_alert_days: parseInt(settings.stock_alert_days),
-        updated_at: new Date().toISOString(),
-      };
+      if (!user) return;
 
       const { error } = await supabase
-        .from("store_settings")
-        .upsert(updates, { onConflict: "user_id" });
+        .from('profiles')
+        .update({
+          notification_preferences: {
+            low_stock: settings.notify_low_stock,
+            expiring_items: settings.notify_expiring,
+            new_orders: settings.notify_new_order,
+          },
+          stock_alert_days: parseInt(settings.stock_alert_days),
+        })
+        .eq('id', user.id);
 
       if (error) throw error;
 
+      // Also save alert days to localStorage for immediate use in other services
       localStorage.setItem("stockAlertDays", settings.stock_alert_days);
 
-      // Save AI Provider and API Key
-      localStorage.setItem("ai_provider", aiProvider);
-      if (geminiKey) {
-        localStorage.setItem("gemini_api_key", geminiKey);
-      }
-      if (hfToken) {
-        localStorage.setItem("hf_token", hfToken);
-      } else {
-        localStorage.removeItem("hf_token");
-      }
-      if (aiProvider === 'gpt4free') {
-        localStorage.setItem("g4f_model", g4fModel);
-        if (g4fVmUrl) localStorage.setItem("g4f_vm_url", g4fVmUrl);
-        else localStorage.removeItem("g4f_vm_url");
-      }
-
-      window.dispatchEvent(new Event("settingsChanged"));
-
       toast.success("Settings saved successfully");
-    } catch (error: any) {
-      console.error("Error saving settings:", error);
-      toast.error("Failed to save settings: " + error.message);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error("Failed to save settings");
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <div className="p-8 text-center">Loading settings...</div>;
+    return (
+      <div className="flex items-center justify-center h-[200px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center">
+    <div className="container max-w-4xl py-8 space-y-8 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">General Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your application preferences and alerts
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">Manage your store preferences and system configuration</p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
           {saving ? "Saving..." : "Save Changes"}
@@ -142,6 +107,41 @@ const Settings = () => {
       </div>
 
       <div className="grid gap-6">
+        {/* Appearance */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Appearance
+            </CardTitle>
+            <CardDescription>Customize how the application looks for you</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Theme</Label>
+                <p className="text-sm text-muted-foreground">Switch between light and dark mode</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={theme === "light" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTheme("light")}
+                >
+                  Light
+                </Button>
+                <Button
+                  variant={theme === "dark" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTheme("dark")}
+                >
+                  Dark
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Notifications */}
         <Card>
           <CardHeader>
@@ -149,26 +149,16 @@ const Settings = () => {
               <Bell className="h-5 w-5" />
               Notifications
             </CardTitle>
-            <CardDescription>Manage your alert preferences</CardDescription>
+            <CardDescription>Choose what updates you want to receive</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>New Order Alerts</Label>
-                <p className="text-sm text-muted-foreground">Get notified when a customer places an order</p>
+                <Label htmlFor="notify-low-stock">Low Stock Alerts</Label>
+                <p className="text-sm text-muted-foreground">Receive alerts when products are below reorder level</p>
               </div>
               <Switch
-                checked={settings.notify_new_order}
-                onCheckedChange={(checked) => setSettings({ ...settings, notify_new_order: checked })}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Low Stock Alerts</Label>
-                <p className="text-sm text-muted-foreground">Get notified when inventory is running low</p>
-              </div>
-              <Switch
+                id="notify-low-stock"
                 checked={settings.notify_low_stock}
                 onCheckedChange={(checked) => setSettings({ ...settings, notify_low_stock: checked })}
               />
@@ -176,27 +166,40 @@ const Settings = () => {
             <Separator />
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Expiring Products</Label>
-                <p className="text-sm text-muted-foreground">Alert when products are close to expiration</p>
+                <Label htmlFor="notify-expiring">Expiring Product Alerts</Label>
+                <p className="text-sm text-muted-foreground">Receive alerts for products near expiration date</p>
               </div>
               <Switch
+                id="notify-expiring"
                 checked={settings.notify_expiring}
                 onCheckedChange={(checked) => setSettings({ ...settings, notify_expiring: checked })}
+              />
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="notify-orders">New Order Notifications</Label>
+                <p className="text-sm text-muted-foreground">Get notified when a new order is placed</p>
+              </div>
+              <Switch
+                id="notify-orders"
+                checked={settings.notify_new_order}
+                onCheckedChange={(checked) => setSettings({ ...settings, notify_new_order: checked })}
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Inventory Config */}
+        {/* Inventory Configuration */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Inventory Configuration
+              Inventory Rules
             </CardTitle>
-            <CardDescription>Customize stock management thresholds</CardDescription>
+            <CardDescription>Configure how system handles your stock data</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="alert-days">Expiration Alert Threshold (days)</Label>
               <Select
@@ -213,171 +216,6 @@ const Settings = () => {
                   <SelectItem value="30">30 days before</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* AI Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BrainCircuit className="h-5 w-5" />
-              AI Configuration
-            </CardTitle>
-            <CardDescription>Configure your AI provider and API settings</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>AI Provider</Label>
-              <Select value={aiProvider} onValueChange={(value) => setAiProvider(value as 'copilot-api' | 'gemini' | 'ernie' | 'gpt4free')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gpt4free">🆓 GPT4Free (No Key Required)</SelectItem>
-                  <SelectItem value="gemini">Google Gemini AI</SelectItem>
-                  <SelectItem value="copilot-api">GitHub Copilot API</SelectItem>
-                  <SelectItem value="ernie">ERNIE AI (Free)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">
-                {aiProvider === 'gpt4free'
-                  ? '🆓 Uses GPT4Free — completely free, no API key needed. Powered by gpt4free open-source project.'
-                  : aiProvider === 'copilot-api'
-                    ? 'Uses GitHub Copilot for AI responses. Requires active Copilot subscription.'
-                    : aiProvider === 'gemini'
-                      ? 'Uses Google Gemini AI. Requires API key from Google AI Studio.'
-                      : 'Uses ERNIE AI via Hugging Face. Free API access with rate limits.'}
-              </p>
-            </div>
-
-            {aiProvider === 'gpt4free' && (
-              <div className="space-y-2">
-                <Label>AI Model</Label>
-                <Select value={g4fModel} onValueChange={setG4fModel}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fastest, Recommended)</SelectItem>
-                    <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
-                    <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
-                    <SelectItem value="llama-3-70b">Llama 3 70B</SelectItem>
-                    <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  All models are free. GPT-4o Mini is the most reliable for business tasks.
-                </p>
-              </div>
-            )}
-
-            {aiProvider === 'gpt4free' && (
-              <div className="space-y-2">
-                <Label>Custom Backend URL (Optional)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="http://localhost:8080"
-                    value={g4fVmUrl}
-                    onChange={(e) => setG4fVmUrl(e.target.value)}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setG4fVmUrl("http://localhost:8080")}
-                  >
-                    Use Local
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Leave empty to use public proxy. Set to <code>http://localhost:8080</code> if running the local proxy.
-                </p>
-              </div>
-            )}
-
-            {aiProvider === 'gemini' && (
-              <div className="space-y-2">
-                <Label>Gemini API Key</Label>
-                <Input
-                  type="password"
-                  placeholder="Enter your Gemini API key"
-                  value={geminiKey}
-                  onChange={(e) => setGeminiKey(e.target.value)}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Get your API key from{' '}
-                  <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    Google AI Studio
-                  </a>
-                </p>
-              </div>
-            )}
-
-            {aiProvider === 'ernie' && (
-              <div className="space-y-2">
-                <Label>Hugging Face Access Token (Optional but Recommended)</Label>
-                <Input
-                  type="password"
-                  placeholder="Enter your Hugging Face Access Token"
-                  value={hfToken}
-                  onChange={(e) => setHfToken(e.target.value)}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Get a free token from{' '}
-                  <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    Hugging Face Settings
-                  </a>
-                  . Without a token, you may hit rate limits quickly.
-                </p>
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  setTestingConnection(true);
-                  try {
-                    const result = await aiService.testConnection({});
-                    if (result.success) {
-                      toast.success(result.message);
-                    } else {
-                      toast.error(result.message);
-                    }
-                  } catch (error) {
-                    toast.error("Connection test failed");
-                  } finally {
-                    setTestingConnection(false);
-                  }
-                }}
-                disabled={testingConnection}
-              >
-                {testingConnection ? "Testing..." : "Test Connection"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Appearance */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
-              Appearance
-            </CardTitle>
-            <CardDescription>Customize the application theme</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Dark Mode</Label>
-                <p className="text-sm text-muted-foreground">Toggle between light and dark theme</p>
-              </div>
-              <Switch
-                checked={theme === "dark"}
-                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-              />
             </div>
           </CardContent>
         </Card>
