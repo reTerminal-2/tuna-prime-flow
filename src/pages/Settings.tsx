@@ -18,7 +18,7 @@ const Settings = () => {
   const [testingConnection, setTestingConnection] = useState(false);
   const [geminiKey, setGeminiKey] = useState("");
   const [hfToken, setHfToken] = useState("");
-  
+
   // Settings State
   const [settings, setSettings] = useState({
     notify_low_stock: true,
@@ -26,15 +26,17 @@ const Settings = () => {
     notify_new_order: true,
     stock_alert_days: "7",
   });
-  
-  const [aiProvider, setAiProvider] = useState<'copilot-api' | 'gemini' | 'ernie'>('copilot-api');
+
+  const [aiProvider, setAiProvider] = useState<'copilot-api' | 'gemini' | 'ernie' | 'gpt4free'>('gpt4free');
+  const [g4fModel, setG4fModel] = useState('gpt-4o-mini');
 
   useEffect(() => {
     fetchSettings();
-    const savedProvider = localStorage.getItem("ai_provider") || 'copilot-api';
-    setAiProvider(savedProvider as 'copilot-api' | 'gemini' | 'ernie');
+    const savedProvider = localStorage.getItem("ai_provider") || 'gpt4free';
+    setAiProvider(savedProvider as 'copilot-api' | 'gemini' | 'ernie' | 'gpt4free');
     setGeminiKey(localStorage.getItem("gemini_api_key") || "");
     setHfToken(localStorage.getItem("hf_token") || "");
+    setG4fModel(localStorage.getItem("g4f_model") || 'gpt-4o-mini');
   }, []);
 
   const fetchSettings = async () => {
@@ -89,7 +91,7 @@ const Settings = () => {
         .upsert(updates, { onConflict: "user_id" });
 
       if (error) throw error;
-      
+
       localStorage.setItem("stockAlertDays", settings.stock_alert_days);
 
       // Save AI Provider and API Key
@@ -102,9 +104,12 @@ const Settings = () => {
       } else {
         localStorage.removeItem("hf_token");
       }
-      
+      if (aiProvider === 'gpt4free') {
+        localStorage.setItem("g4f_model", g4fModel);
+      }
+
       window.dispatchEvent(new Event("settingsChanged"));
-      
+
       toast.success("Settings saved successfully");
     } catch (error: any) {
       console.error("Error saving settings:", error);
@@ -190,8 +195,8 @@ const Settings = () => {
           <CardContent>
             <div className="space-y-2">
               <Label htmlFor="alert-days">Expiration Alert Threshold (days)</Label>
-              <Select 
-                value={settings.stock_alert_days} 
+              <Select
+                value={settings.stock_alert_days}
                 onValueChange={(val) => setSettings({ ...settings, stock_alert_days: val })}
               >
                 <SelectTrigger id="alert-days">
@@ -220,25 +225,49 @@ const Settings = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>AI Provider</Label>
-              <Select value={aiProvider} onValueChange={(value) => setAiProvider(value as 'copilot-api' | 'gemini' | 'ernie')}>
+              <Select value={aiProvider} onValueChange={(value) => setAiProvider(value as 'copilot-api' | 'gemini' | 'ernie' | 'gpt4free')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="copilot-api">GitHub Copilot API</SelectItem>
+                  <SelectItem value="gpt4free">🆓 GPT4Free (No Key Required)</SelectItem>
                   <SelectItem value="gemini">Google Gemini AI</SelectItem>
+                  <SelectItem value="copilot-api">GitHub Copilot API</SelectItem>
                   <SelectItem value="ernie">ERNIE AI (Free)</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground">
-                {aiProvider === 'copilot-api' 
-                  ? 'Uses GitHub Copilot for AI responses. Requires active Copilot subscription.'
-                  : aiProvider === 'gemini'
-                  ? 'Uses Google Gemini AI. Requires API key from Google AI Studio.'
-                  : 'Uses ERNIE AI via Hugging Face. Free API access with rate limits.'}
+                {aiProvider === 'gpt4free'
+                  ? '🆓 Uses GPT4Free — completely free, no API key needed. Powered by gpt4free open-source project.'
+                  : aiProvider === 'copilot-api'
+                    ? 'Uses GitHub Copilot for AI responses. Requires active Copilot subscription.'
+                    : aiProvider === 'gemini'
+                      ? 'Uses Google Gemini AI. Requires API key from Google AI Studio.'
+                      : 'Uses ERNIE AI via Hugging Face. Free API access with rate limits.'}
               </p>
             </div>
-            
+
+            {aiProvider === 'gpt4free' && (
+              <div className="space-y-2">
+                <Label>AI Model</Label>
+                <Select value={g4fModel} onValueChange={setG4fModel}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fastest, Recommended)</SelectItem>
+                    <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
+                    <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
+                    <SelectItem value="llama-3-70b">Llama 3 70B</SelectItem>
+                    <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  All models are free. GPT-4o Mini is the most reliable for business tasks.
+                </p>
+              </div>
+            )}
+
             {aiProvider === 'gemini' && (
               <div className="space-y-2">
                 <Label>Gemini API Key</Label>
@@ -275,10 +304,10 @@ const Settings = () => {
                 </p>
               </div>
             )}
-            
+
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={async () => {
                   setTestingConnection(true);

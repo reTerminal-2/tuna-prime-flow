@@ -611,6 +611,33 @@ export const aiService = {
                 }
             }
 
+            // --- GPT4FREE Test ---
+            if (provider === 'gpt4free') {
+                try {
+                    const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
+                    const response = await fetch('https://api.g4f.dev/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: g4fModel,
+                            messages: [{ role: 'user', content: 'Say hello in 3 words.' }]
+                        })
+                    });
+
+                    if (!response.ok) throw new Error(`G4F API Error: ${response.status}`);
+                    const data = await response.json();
+                    const content = data.choices?.[0]?.message?.content;
+
+                    if (content) {
+                        return { success: true, message: `✅ GPT4Free Connected! Model: ${g4fModel}` };
+                    } else {
+                        throw new Error('No response from G4F API');
+                    }
+                } catch (e: any) {
+                    return { success: false, message: `G4F Connection failed: ${e.message}` };
+                }
+            }
+
             return { success: false, message: "Unknown Provider" };
         } catch (error: any) {
             return { success: false, message: error.message || "Connection failed" };
@@ -879,6 +906,53 @@ export const aiService = {
                 } catch (e: any) {
                     console.error("Free ChatGPT failed", e);
                     // Fallback to simulation
+                    return aiService.simulateResponse(message, context);
+                }
+            }
+
+            // --- GPT4FREE (Free, no key needed, OpenAI-compatible) ---
+            if (provider === 'gpt4free') {
+                const systemPrompt = aiService.generateSystemPrompt(message, context);
+                const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
+
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+                    const response = await fetch('https://api.g4f.dev/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: g4fModel,
+                            messages: [{ role: 'user', content: systemPrompt }]
+                        }),
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error(`G4F Error: ${response.status} - ${errText}`);
+                    }
+
+                    const data = await response.json();
+                    const content = data.choices?.[0]?.message?.content;
+
+                    if (!content) throw new Error('No content received from G4F API');
+
+                    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+                    try {
+                        return JSON.parse(cleanContent) as ChatResponse;
+                    } catch (e) {
+                        return { message: cleanContent };
+                    }
+                } catch (e: any) {
+                    console.error('G4F API failed', e);
+                    if (e.name === 'AbortError') {
+                        return { message: '⚠️ **GPT4Free Timeout:** The request took too long. The free API may be busy. Please try again.' };
+                    }
                     return aiService.simulateResponse(message, context);
                 }
             }
