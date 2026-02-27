@@ -233,7 +233,17 @@ TUNABRAIN — BUSINESS OPTIMIZATION INTELLIGENCE v2.0
         const { systemPrompt, userMessage } = await aiService.generateChatPayload(message, context);
 
         const endpoints = [
-            // Pollinations Direct — Only endpoint
+            // VPS Relay — Primary
+            {
+                url: 'http://72.60.232.20:3100/chat',
+                payload: {
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userMessage }
+                    ]
+                }
+            },
+            // Pollinations Direct — Fallback
             {
                 url: 'https://text.pollinations.ai/openai',
                 payload: {
@@ -465,15 +475,15 @@ TUNABRAIN — BUSINESS OPTIMIZATION INTELLIGENCE v2.0
 
     testConnection: async (config: any): Promise<{ success: boolean; message: string }> => {
         try {
+            const vpsRes = await fetch('http://72.60.232.20:3100/health').catch(() => null);
+            if (vpsRes?.ok) return { success: true, message: "✅ TunaBrain Core is Online (VPS Relay)" };
+
             const res = await fetch('https://text.pollinations.ai/openai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ model: 'openai', messages: [{ role: 'user', content: 'hi' }] })
             });
             if (res.ok) return { success: true, message: "✅ TunaBrain Core is Online (Pollinations)" };
-
-            const vpsRes = await fetch('http://72.60.232.20:3100/health').catch(() => null);
-            if (vpsRes?.ok) return { success: true, message: "✅ TunaBrain Core is Online (VPS Relay)" };
 
             throw new Error("All AI endpoints are currently unreachable.");
         } catch (error: any) {
