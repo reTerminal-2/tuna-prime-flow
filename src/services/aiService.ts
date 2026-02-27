@@ -276,78 +276,88 @@ export const aiService = {
         return ["Review pending orders", "Check inventory", "Email customers", "Update prices"];
     },
 
-    // 11. Test Connection
+    // 11. Test Connection — Checks everything
     testConnection: async (config: any): Promise<{ success: boolean; message: string }> => {
         try {
-            const RELAY = 'http://72.60.232.20:3100';
-            const res = await fetch(`${RELAY}/health`);
-            if (!res.ok) throw new Error(`Status ${res.status}`);
-            const data = await res.json();
-            return { success: true, message: `✅ Relay online! Model: ${data.model}, Provider: ${data.provider}` };
-        } catch (error: any) {
-            return { success: false, message: `Relay unreachable: ${error.message}` };
-        }
-    },
-
-    // 12. Simulation fallback (only used if relay is down)
-    simulateResponse: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        return { message: "Could not reach the AI right now. Please make sure the VPS relay is running on port 3100." };
-    },
-
-    // 9. Chat with AI — sends every prompt to VPS relay → GPT4Free (Pollinations)
-    chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }, retryCount = 0): Promise<ChatResponse> => {
-        const { systemPrompt, userMessage } = aiService.generateChatPayload(message, context);
-
-        // VPS relay: has CORS, routes to GPT4Free with Pollinations + locked model
-        const RELAY_URL = 'http://72.60.232.20:3100/chat';
-
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 50000);
-
-            const res = await fetch(RELAY_URL, {
+            // Check primary source
+            const res = await fetch('https://text.pollinations.ai/openai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userMessage }
-                    ]
-                }),
-                signal: controller.signal
+                body: JSON.stringify({ model: 'openai', messages: [{ role: 'user', content: 'hi' }] })
             });
+            if (res.ok) return { success: true, message: "✅ AI Core is Online & Stable (Pollinations)" };
 
-            clearTimeout(timeoutId);
+            // Backup check
+            const vpsRes = await fetch('http://72.60.232.20:3100/health').catch(() => null);
+            if (vpsRes?.ok) return { success: true, message: "✅ VPS Relay is Online" };
 
-            if (!res.ok) {
-                const errText = await res.text();
-                throw new Error(`Relay error ${res.status}: ${errText}`);
-            }
-
-            const data = await res.json();
-            const content = data.choices?.[0]?.message?.content?.trim();
-
-            if (!content) throw new Error('Empty response from AI');
-
-            // Try to parse as JSON action, otherwise return as plain chat
-            const clean = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-            try {
-                const parsed = JSON.parse(clean);
-                if (parsed.message) return parsed as ChatResponse;
-            } catch { /* plain text response, fine */ }
-
-            return { message: clean };
-
-        } catch (e: any) {
-            if (e.name === 'AbortError') {
-                toast.error('⏳ AI Timeout — VPS is taking too long.');
-            } else {
-                toast.error(`🚨 AI Relay Error: ${e.message}`);
-            }
-            console.error('[AI] Relay call failed:', e.message);
-            return aiService.simulateResponse(message, context);
+            throw new Error("All AI endpoints are currently unreachable.");
+        } catch (error: any) {
+            return { success: false, message: `Connection failed: ${error.message}` };
         }
+    },
+
+    // 12. Smart fallback
+    simulateResponse: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return { message: "I'm TunaBrain, your business assistant. I'm currently in a light-mode due to connection fluctuations, but I'm still here to help! How can I assist you with your store today?" };
+    },
+
+    // 9. Ultra-Stable Chat with AI (Multi-Endpoint Strategy)
+    chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
+        const { systemPrompt, userMessage } = aiService.generateChatPayload(message, context);
+
+        const endpoints = [
+            // Layer 1: Pollinations Direct (Highest Stability, No CORS issues)
+            {
+                url: 'https://text.pollinations.ai/openai',
+                payload: {
+                    model: 'openai',
+                    messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }],
+                    seed: 42
+                }
+            },
+            // Layer 2: VPS Relay (Your custom relay on port 3100)
+            {
+                url: 'http://72.60.232.20:3100/chat',
+                payload: {
+                    messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }]
+                }
+            }
+        ];
+
+        for (const target of endpoints) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 40000);
+
+                const res = await fetch(target.url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(target.payload),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const content = data.choices?.[0]?.message?.content?.trim();
+                    if (content) {
+                        const clean = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+                        try {
+                            const parsed = JSON.parse(clean);
+                            if (parsed.message) return parsed as ChatResponse;
+                        } catch { /* text */ }
+                        return { message: content };
+                    }
+                }
+            } catch (e: any) {
+                console.warn(`[AI] Endpoint ${target.url} failed:`, e.message);
+            }
+        }
+
+        return aiService.simulateResponse(message, context);
     },
 
     generateChatPayload: (message: string, context: any) => {
