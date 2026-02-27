@@ -87,7 +87,7 @@ export default function SuperAdminDashboard() {
         // Load AI Settings
         setAiProvider(localStorage.getItem("ai_provider") || 'gpt4free');
         setG4fModel(localStorage.getItem("g4f_model") || 'gpt-4o-mini');
-        setG4fVmUrl(localStorage.getItem("g4f_vm_url") || "");
+        setG4fVmUrl(localStorage.getItem("g4f_vm_url") || "http://72.60.232.20:1337");
         setGeminiKey(localStorage.getItem("gemini_api_key") || "");
         setHfToken(localStorage.getItem("hf_token") || "");
 

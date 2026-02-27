@@ -509,114 +509,15 @@ export const aiService = {
     // 11. Test Connection
     testConnection: async (config: any): Promise<{ success: boolean; message: string }> => {
         try {
-            const provider = localStorage.getItem("ai_provider") || 'copilot-api';
+            // Force gpt4free for testing
+            const provider = 'gpt4free';
 
-            if (provider === 'copilot-api') {
-                try {
-                    const response = await fetch("/api/v1/models");
-                    if (!response.ok) throw new Error(`Status ${response.status}`);
-                    const data = await response.json();
-                    if (data.data && Array.isArray(data.data)) {
-                        return { success: true, message: "Copilot API Connected & Models Loaded!" };
-                    }
-                } catch (e: any) {
-                    return { success: false, message: `Copilot API Error: ${e.message}` };
-                }
-            }
-
-            if (provider === 'gemini') {
-                try {
-                    const apiKey = localStorage.getItem("gemini_api_key");
-                    if (!apiKey) {
-                        return { success: false, message: "Missing Gemini API Key. Please configure it in settings." };
-                    }
-
-                    const genAI = new GoogleGenerativeAI(apiKey);
-                    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-                    const result = await model.generateContent("Hello, this is a connection test.");
-                    const response = await result.response;
-                    const content = response.text();
-
-                    if (content) {
-                        return { success: true, message: "Gemini AI Connected & Ready!" };
-                    } else {
-                        throw new Error("No response from Gemini API");
-                    }
-                } catch (e: any) {
-                    return { success: false, message: `Gemini API Error: ${e.message}. Please check your API key.` };
-                }
-            }
-
-            if (provider === 'ernie') {
-                try {
-                    // Test ERNIE API with a simple prompt via local proxy
-                    const hfToken = localStorage.getItem("hf_token");
-                    const headers: any = {
-                        "Content-Type": "application/json"
-                    };
-
-                    if (hfToken) {
-                        headers["Authorization"] = `Bearer ${hfToken}`;
-                    }
-
-                    const response = await fetch("/api/hf/models/baidu/ERNIE-4.5-21B-A3B", {
-                        method: "POST",
-                        headers: headers,
-                        body: JSON.stringify({
-                            inputs: "Hello, this is a connection test.",
-                            parameters: {
-                                max_new_tokens: 50,
-                                temperature: 0.7
-                            }
-                        })
-                    });
-
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`ERNIE API Error: ${response.status} - ${errorText}`);
-                    }
-
-                    const data = await response.json();
-                    if (data[0]?.generated_text) {
-                        return { success: true, message: "ERNIE AI Connected & Ready!" };
-                    } else {
-                        throw new Error("No response from ERNIE API");
-                    }
-                } catch (e: any) {
-                    return { success: false, message: `ERNIE API Error: ${e.message}. The free API might be rate limited.` };
-                }
-            }
-
-            if (provider === 'free-chatgpt') {
-                try {
-                    const response = await fetch("/api/conversation", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            message: "Hello, this is a connection test."
-                        })
-                    });
-
-                    if (!response.ok) throw new Error(`Server Error: ${response.status}`);
-                    const data = await response.json();
-
-                    if (data.status === "success") {
-                        return { success: true, message: "TunaBrain AI Core Connected!" };
-                    } else {
-                        throw new Error(data.message || "Unknown error from AI Core");
-                    }
-                } catch (e: any) {
-                    return { success: false, message: `Connection failed: ${e.message}. Make sure the python server is running on port 6969.` };
-                }
-            }
-
-            // --- GPT4FREE Test ---
             if (provider === 'gpt4free') {
                 try {
                     const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
-                    const g4fBaseUrl = localStorage.getItem('g4f_vm_url') || '';
-                    const apiUrl = g4fBaseUrl ? `${g4fBaseUrl}/v1/chat/completions` : '/api/g4f';
+                    // Default to VPS if not set
+                    const g4fBaseUrl = localStorage.getItem('g4f_vm_url') || 'http://72.60.232.20:1337';
+                    const apiUrl = `${g4fBaseUrl}/v1/chat/completions`;
 
                     const response = await fetch(apiUrl, {
                         method: 'POST',
@@ -632,7 +533,7 @@ export const aiService = {
                     const content = data.choices?.[0]?.message?.content;
 
                     if (content) {
-                        return { success: true, message: `✅ GPT4Free Connected! Model: ${g4fModel}` };
+                        return { success: true, message: `✅ GPT4Free Connected to VPS! Model: ${g4fModel}` };
                     } else {
                         throw new Error('No response from G4F API');
                     }
@@ -707,8 +608,9 @@ export const aiService = {
             if (provider === 'gpt4free') {
                 const systemPrompt = aiService.generateSystemPrompt(message, context);
                 const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
-                const g4fBaseUrl = localStorage.getItem('g4f_vm_url') || '';
-                const endpoint = g4fBaseUrl ? `${g4fBaseUrl}/v1/chat/completions` : '/api/g4f';
+                // Default to VPS if not set
+                const g4fBaseUrl = localStorage.getItem('g4f_vm_url') || 'http://72.60.232.20:1337';
+                const endpoint = `${g4fBaseUrl}/v1/chat/completions`;
 
                 try {
                     const controller = new AbortController();
