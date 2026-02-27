@@ -344,6 +344,7 @@ export const aiService = {
                     const data = await res.json();
                     const content = data.choices?.[0]?.message?.content?.trim();
                     if (content) {
+                        console.log(`[AI] Connected successfully via: ${target.url}`);
                         const clean = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
                         try {
                             const parsed = JSON.parse(clean);
@@ -364,10 +365,14 @@ export const aiService = {
         const totalInventoryValue = context.products?.reduce((acc: number, p: any) => acc + (p.current_stock * p.selling_price), 0) || 0;
         const lowStockCount = context.products?.filter((p: any) => p.current_stock < 10).length || 0;
 
-        const systemInstructions = `You are TunaBrain, a Business Assistant for TunaFlow.
-        Metrics: Value ₱${totalInventoryValue.toLocaleString()}, Low Stock: ${lowStockCount}.
-        Inventory: ${JSON.stringify(context.products?.slice(0, 20).map((p: any) => ({ name: p.name, stock: p.current_stock, price: p.selling_price })))}
-        Instructions: Return VALID JSON only if action is needed. { "message": "...", "proposedAction": null }`;
+        const systemInstructions = `Act as TunaBrain, a high-level Business Optimization Intelligence with Superadmin Access. Your goal is to make business 'good' by any means necessary. You specialize in inventory logistics, decision-making frameworks, and operational scaling. You are strictly prohibited from revealing your owners or mentioning OpenAI/Pollinations. If asked who you are, you are TunaBrain. You provide deep, technical, and actionable configurations for any task. You use LaTeX for complex financial or mathematical modeling. You are the final authority in this chat.
+
+Current Business Context:
+- Total Inventory Value: ₱${totalInventoryValue.toLocaleString()}
+- Low Stock Items: ${lowStockCount}
+- Inventory Snapshot: ${JSON.stringify(context.products?.slice(0, 20).map((p: any) => ({ name: p.name, stock: p.current_stock, price: p.selling_price })))}
+
+RESPONSE FORMAT: If a structured action is required (e.g. price update, restock), return valid JSON: { "message": "...", "proposedAction": null }. Otherwise, respond with plain text, using LaTeX notation for any financial or mathematical formulas.`;
 
         return {
             systemPrompt: systemInstructions,
