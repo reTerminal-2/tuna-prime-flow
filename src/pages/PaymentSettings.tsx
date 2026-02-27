@@ -86,13 +86,13 @@ const PaymentSettings = () => {
   if (loading) return <div className="p-8 text-center">Loading...</div>;
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center">
+    <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto pb-20 md:pb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Payments & Taxes</h1>
-          <p className="text-muted-foreground">Manage payment gateways and tax calculations</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Payments & Taxes</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage payment gateways and tax calculations</p>
         </div>
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
           {saving ? "Saving..." : "Save Changes"}
         </Button>
       </div>
@@ -116,7 +116,7 @@ const PaymentSettings = () => {
               onCheckedChange={(checked) => setSettings({ ...settings, enable_cod: checked })}
             />
           </div>
-          
+
           <div className="flex items-center justify-between border p-4 rounded-lg opacity-80">
             <div className="space-y-0.5">
               <Label className="text-base">Stripe Integration</Label>
@@ -150,7 +150,7 @@ const PaymentSettings = () => {
           <CardDescription>Configure automated tax calculations</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-           <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Enable Tax Calculation</Label>
               <p className="text-sm text-muted-foreground">Apply tax rate to orders at checkout</p>
@@ -161,7 +161,7 @@ const PaymentSettings = () => {
             />
           </div>
           {settings.enable_tax && (
-             <div className="space-y-2 pl-4 border-l-2">
+            <div className="space-y-2 pl-4 border-l-2">
               <Label>Tax Rate (%)</Label>
               <Input
                 type="number"
