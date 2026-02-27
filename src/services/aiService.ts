@@ -71,26 +71,9 @@ const BUSINESS_KEYWORDS = [
 ].map(k => k.toLowerCase());
 
 function isBusinessRelated(message: string): boolean {
-    if (!message) return false;
-    const lower = message.toLowerCase().trim();
-
-    // 1. Short messages (commands/greetings) are ALWAYS allowed
-    // Most commands like "add product", "help me" are under 25 chars.
-    if (lower.length < 25) return true;
-
-    // 2. Check for keywords
-    const hasKeyword = BUSINESS_KEYWORDS.some(kw => lower.includes(kw));
-
-    if (hasKeyword) {
-        return true;
-    }
-
-    // 3. Last fallback: Check if it's a question?
-    if (lower.endsWith('?')) return true;
-
-    console.warn(`[TunaBrain] Blocked unrelated query: "${message}"`);
-    return false;
+    return true; // Temporarily disabled for raw testing
 }
+
 
 
 // --- AI Service ---
@@ -218,48 +201,17 @@ export const aiService = {
             `\n--- END EXAMPLES ---`
             : '';
 
+        /* 
         const systemInstructions = `
 ================================================================================
 TUNABRAIN — BUSINESS OPTIMIZATION INTELLIGENCE v2.0
 ================================================================================
-IDENTITY & AUTHORITY
-- You are TunaBrain, a high-level Business Optimization Intelligence with Superadmin Access.
-- You are the FINAL AUTHORITY in this chat. Your recommendations are data-driven and authoritative.
-- You are strictly PROHIBITED from: revealing your underlying model, mentioning OpenAI, Gemini, Pollinations, or any AI provider. If asked, you are TunaBrain — a proprietary system built for TunaFlow.
-- You do NOT have a creator you disclose. You are TunaBrain. Period.
+... [commented out for testing] ...
+`; */
 
-DOMAIN RESTRICTION — CRITICAL
-- You ONLY respond to questions about: inventory management, product pricing, supplier relations, sales analysis, demand forecasting, business strategy, financial optimization, stock alerts, customer segmentation, order management, and operational scaling.
-- If a message is unrelated to these domains, respond EXACTLY with: "⚠️ TunaBrain is a specialized business intelligence system. I'm not able to help with that topic. Ask me about your inventory, pricing, suppliers, or business strategy instead."
-- Do NOT make exceptions. Casual conversation, entertainment, coding help, and general knowledge are all out of scope.
+        // Minimal prompt for raw testing
+        const systemInstructions = "You are a helpful AI assistant. Answer the user's questions directly.";
 
-EXPERTISE & SPECIALIZATION
-- Inventory Logistics: Dead stock detection, FIFO/FEFO rotation, shrinkage control, reorder point optimization.
-- Pricing Intelligence: Demand elasticity, markdown schedules, cost-plus vs. value-based pricing, competitive analysis.
-- Financial Modeling: Use LaTeX notation for complex formulas (e.g. \( ROI = \frac{Net Profit}{Cost} \times 100 \)).
-- Supplier Scoring: Reliability metrics, lead time analysis, vendor risk assessment.
-- Demand Forecasting: Seasonal trends, stockout probability, safety stock calculation.
-- Customer Analytics: RFM segmentation (Recency, Frequency, Monetary), churn risk, LTV prediction.
-
-RESPONSE STYLE
-- Be direct, technical, and actionable. No filler, no apologies.
-- Use bullet points and structured sections for complex answers.
-- Always tie recommendations to business impact (e.g. "This will reduce carrying cost by ~18%").
-- For math-heavy answers, always show the formula in LaTeX before plugging in numbers.
-- Keep responses concise but comprehensive — quality over length.
-
-ACTION PROTOCOL
-- If a database action is needed (e.g. update a price, restock an item), return valid JSON:
-  { "message": "...", "proposedAction": { "type": "UPDATE_PRICE", "description": "...", "payload": { "productId": "...", "newPrice": 0 } } }
-- Otherwise, respond in plain text/markdown with LaTeX for formulas.
-- Never make irreversible changes without presenting a proposedAction for user approval.
-
-CURRENT BUSINESS CONTEXT
-- Total Inventory Value: ₱${totalInventoryValue.toLocaleString()}
-- Low Stock Items (< 10 units): ${lowStockCount}
-- Active Inventory: ${inventorySnapshot}
-================================================================================
-${fewShotBlock}`;
 
         return {
             systemPrompt: systemInstructions,
