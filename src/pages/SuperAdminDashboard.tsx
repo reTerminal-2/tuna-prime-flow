@@ -181,8 +181,13 @@ export default function SuperAdminDashboard() {
             localStorage.setItem("g4f_model", g4fModel);
             localStorage.setItem("gemini_api_key", geminiKey);
             localStorage.setItem("hf_token", hfToken);
-            if (g4fVmUrl) localStorage.setItem("g4f_vm_url", g4fVmUrl);
-            else localStorage.removeItem("g4f_vm_url");
+            if (g4fVmUrl) {
+                // Ensure URL has protocol
+                const formattedUrl = g4fVmUrl.startsWith('http') ? g4fVmUrl : `http://${g4fVmUrl}`;
+                localStorage.setItem("g4f_vm_url", formattedUrl);
+            } else {
+                localStorage.removeItem("g4f_vm_url");
+            }
 
             // Dispatch event to update other components
             window.dispatchEvent(new Event("settingsChanged"));
@@ -596,17 +601,17 @@ export default function SuperAdminDashboard() {
                         </CardContent>
                     </Card>
 
-                    {/* AI Configuration - NEW GLOBAL CONTROL */}
+                    {/* AI Configuration - LOCKED TO VPS */}
                     <Card className="bg-card border-border lg:col-span-3 mt-6">
                         <CardHeader className="border-b border-border/50">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
                                     <CardTitle className="flex items-center gap-2 text-primary">
                                         <BrainCircuit className="w-6 h-6" />
-                                        Platform AI Configuration
+                                        Platform AI Configuration (Locked)
                                     </CardTitle>
                                     <CardDescription>
-                                        Configure the default AI provider for all sellers across the platform.
+                                        The system is permanently locked to the GPT4Free VPS instance at 72.60.232.20.
                                     </CardDescription>
                                 </div>
                                 <div className="flex gap-2">
@@ -624,7 +629,7 @@ export default function SuperAdminDashboard() {
                                         className="gap-2 bg-primary hover:bg-primary/90"
                                     >
                                         <Save className="w-4 h-4" />
-                                        {savingAI ? "Saving..." : "Save Global Config"}
+                                        {savingAI ? "Saving..." : "Save Config"}
                                     </Button>
                                 </div>
                             </div>
@@ -633,111 +638,69 @@ export default function SuperAdminDashboard() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium">Global AI Provider</Label>
-                                        <Select value={aiProvider} onValueChange={setAiProvider}>
+                                        <Label className="text-sm font-medium">Locked AI Provider</Label>
+                                        <div className="p-3 bg-muted/30 rounded-lg border border-border flex items-center justify-between">
+                                            <span className="text-sm font-semibold">🆓 GPT4Free (Self-Hosted VPS)</span>
+                                            <ShieldCheck className="w-4 h-4 text-green-500" />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <Globe className="w-3 h-3" />
+                                            Other providers have been disabled for security and performance.
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium">G4F Model Selection</Label>
+                                        <Select value={g4fModel} onValueChange={setG4fModel}>
                                             <SelectTrigger className="bg-muted/30">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="gpt4free">🆓 GPT4Free (No Key Required)</SelectItem>
-                                                <SelectItem value="gemini">Google Gemini AI</SelectItem>
-                                                <SelectItem value="copilot-api">GitHub Copilot API</SelectItem>
-                                                <SelectItem value="ernie">ERNIE AI (Free)</SelectItem>
+                                                <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fastest)</SelectItem>
+                                                <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
+                                                <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
+                                                <SelectItem value="llama-3-70b">Llama 3 70B</SelectItem>
+                                                <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                            <Globe className="w-3 h-3" />
-                                            This selection affects TunaBrain results for all seller dashboards.
-                                        </p>
                                     </div>
 
-                                    {aiProvider === 'gpt4free' && (
-                                        <>
-                                            <div className="space-y-2 animate-in slide-in-from-left duration-300">
-                                                <Label className="text-sm font-medium">G4F Model Selection</Label>
-                                                <Select value={g4fModel} onValueChange={setG4fModel}>
-                                                    <SelectTrigger className="bg-muted/30">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fastest)</SelectItem>
-                                                        <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
-                                                        <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
-                                                        <SelectItem value="llama-3-70b">Llama 3 70B</SelectItem>
-                                                        <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2 animate-in slide-in-from-left duration-400">
-                                                <Label className="text-sm font-medium">Custom Backend (Optional VM)</Label>
-                                                <div className="flex gap-2">
-                                                    <Input
-                                                        placeholder="http://localhost:8080"
-                                                        value={g4fVmUrl}
-                                                        onChange={(e) => setG4fVmUrl(e.target.value)}
-                                                        className="bg-muted/30 font-mono text-xs"
-                                                    />
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setG4fVmUrl("http://localhost:8080")}
-                                                        className="text-[10px]"
-                                                    >
-                                                        Set Localhost
-                                                    </Button>
-                                                </div>
-                                                <p className="text-[10px] text-yellow-500/80 italic">
-                                                    Note: Using localhost requires the Node.js/Python backend to be running on the user's PC.
-                                                </p>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {aiProvider === 'gemini' && (
-                                        <div className="space-y-2 animate-in slide-in-from-left duration-300">
-                                            <Label className="text-sm font-medium">Gemini API Key</Label>
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium">VPS Backend URL</Label>
+                                        <div className="flex gap-2">
                                             <Input
-                                                type="password"
-                                                placeholder="AIzaSy..."
-                                                value={geminiKey}
-                                                onChange={(e) => setGeminiKey(e.target.value)}
-                                                className="bg-muted/30"
+                                                placeholder="http://72.60.232.20:1337"
+                                                value={g4fVmUrl}
+                                                onChange={(e) => setG4fVmUrl(e.target.value)}
+                                                className="bg-muted/30 font-mono text-xs"
                                             />
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setG4fVmUrl("http://72.60.232.20:1337")}
+                                                className="text-[10px]"
+                                            >
+                                                Reset to VPS
+                                            </Button>
                                         </div>
-                                    )}
-
-                                    {aiProvider === 'ernie' && (
-                                        <div className="space-y-2 animate-in slide-in-from-left duration-300">
-                                            <Label className="text-sm font-medium">Hugging Face Token</Label>
-                                            <Input
-                                                type="password"
-                                                placeholder="hf_..."
-                                                value={hfToken}
-                                                onChange={(e) => setHfToken(e.target.value)}
-                                                className="bg-muted/30"
-                                            />
-                                        </div>
-                                    )}
+                                    </div>
                                 </div>
 
                                 <div className="bg-muted/20 rounded-xl p-5 border border-border/50">
                                     <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                                         <Terminal className="w-4 h-4 text-primary" />
-                                        Configuration Guide
+                                        System Status
                                     </h4>
                                     <div className="space-y-4 text-xs text-muted-foreground">
-                                        <p>
-                                            <strong className="text-foreground">GPT4Free:</strong> Best for zero-cost operation. Uses public proxies. Unstable but completely free.
-                                        </p>
-                                        <p>
-                                            <strong className="text-foreground">Gemini AI:</strong> High reliability and speed. Requires a Google Cloud/AI Studio key.
-                                        </p>
-                                        <p>
-                                            <strong className="text-foreground">Local Proxy:</strong> If public endpoints are blocked by CORS, use the provided script in <code>/backend</code> to run a local bridge.
-                                        </p>
-                                        <div className="p-3 bg-primary/10 rounded border border-primary/20 text-primary-foreground/90 font-mono">
-                                            Default Port: 8080
+                                        <div className="p-3 bg-green-500/10 rounded border border-green-500/20 text-green-500 font-mono">
+                                            Endpoint Ready: 72.60.232.20:1337
                                         </div>
+                                        <p>
+                                            <strong className="text-foreground">Exclusive Access:</strong> This installation is configured to ONLY use your private VPS. This ensures maximum privacy and avoids 3rd-party API quotas.
+                                        </p>
+                                        <p>
+                                            <strong className="text-foreground">Self-Correction:</strong> If the connection fails, the system will automatically attempt to reconnect to the Docker container on your Ubuntu server.
+                                        </p>
                                     </div>
                                 </div>
                             </div>

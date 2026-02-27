@@ -615,7 +615,10 @@ export const aiService = {
             if (provider === 'gpt4free') {
                 try {
                     const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
-                    const response = await fetch('/api/g4f', {
+                    const g4fBaseUrl = localStorage.getItem('g4f_vm_url') || '';
+                    const apiUrl = g4fBaseUrl ? `${g4fBaseUrl}/v1/chat/completions` : '/api/g4f';
+
+                    const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -696,226 +699,16 @@ export const aiService = {
     // 9. Chat with AI (Context Aware - Powered by Gemini or Custom)
     chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }, retryCount = 0): Promise<ChatResponse> => {
         try {
-            const provider = localStorage.getItem("ai_provider") || 'copilot-api';
+            // Force gpt4free as the primary provider
+            const provider = 'gpt4free';
             const MAX_RETRIES = 3;
 
-            // --- COPILOT API ---
-            if (provider === 'copilot-api') {
-                const systemPrompt = aiService.generateSystemPrompt(message, context);
-
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for complex logic
-
-                    const response = await fetch("/api/v1/chat/completions", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            model: "gpt-4", // Use high quality model
-                            messages: [
-                                { role: "user", content: systemPrompt }
-                            ]
-                        }),
-                        signal: controller.signal
-                    });
-
-                    clearTimeout(timeoutId);
-
-                    if (!response.ok) {
-                        const errText = await response.text();
-                        throw new Error(`Copilot API Error: ${response.status} - ${errText}`);
-                    }
-
-                    const data = await response.json();
-                    const content = data.choices?.[0]?.message?.content;
-
-                    if (!content) throw new Error("No content received from Copilot API");
-
-                    // Clean up markdown
-                    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-                    try {
-                        return JSON.parse(cleanContent) as ChatResponse;
-                    } catch (e) {
-                        console.warn("AI did not return valid JSON:", cleanContent);
-                        return { message: cleanContent };
-                    }
-
-                } catch (e: any) {
-                    console.error("Copilot API failed", e);
-
-                    if (e.message.includes("quota_exceeded") || e.message.includes("429")) {
-                        return {
-                            message: "⚠️ **Copilot Error:** Your GitHub Copilot quota is exceeded or rate limited. Please check your subscription or try again later."
-                        };
-                    }
-
-                    // Fallback to simulation
-                    return aiService.simulateResponse(message, context);
-                }
-            }
-
-            // --- GEMINI AI ---
-            if (provider === 'gemini') {
-                try {
-                    const apiKey = localStorage.getItem("gemini_api_key");
-                    if (!apiKey) {
-                        return {
-                            message: "⚠️ **Gemini Error:** Missing Gemini API Key. Please configure it in settings."
-                        };
-                    }
-
-                    const genAI = new GoogleGenerativeAI(apiKey);
-                    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-                    const systemPrompt = aiService.generateSystemPrompt(message, context);
-
-                    const result = await model.generateContent(systemPrompt);
-                    const response = await result.response;
-                    const content = response.text();
-
-                    if (!content) throw new Error("No content received from Gemini API");
-
-                    // Clean up markdown
-                    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-                    try {
-                        return JSON.parse(cleanContent) as ChatResponse;
-                    } catch (e) {
-                        console.warn("AI did not return valid JSON:", cleanContent);
-                        return { message: cleanContent };
-                    }
-
-                } catch (e: any) {
-                    console.error("Gemini API failed", e);
-                    return {
-                        message: `⚠️ **Gemini Error:** ${e.message}. Please check your API key and try again.`
-                    };
-                }
-            }
-
-            // --- ERNIE AI (Free Hugging Face API) ---
-            if (provider === 'ernie') {
-                try {
-                    const systemPrompt = aiService.generateSystemPrompt(message, context);
-
-                    // Use Hugging Face Inference API for ERNIE models via local proxy to avoid CORS
-                    const hfToken = localStorage.getItem("hf_token");
-                    const headers: any = {
-                        "Content-Type": "application/json"
-                    };
-
-                    if (hfToken) {
-                        headers["Authorization"] = `Bearer ${hfToken}`;
-                    }
-
-                    const response = await fetch("/api/hf/models/baidu/ERNIE-4.5-21B-A3B", {
-                        method: "POST",
-                        headers: headers,
-                        body: JSON.stringify({
-                            inputs: systemPrompt,
-                            parameters: {
-                                max_new_tokens: 1000,
-                                temperature: 0.7,
-                                top_p: 0.9,
-                                return_full_text: false
-                            }
-                        })
-                    });
-
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`ERNIE API Error: ${response.status} - ${errorText}`);
-                    }
-
-                    const data = await response.json();
-                    const content = data[0]?.generated_text;
-
-                    if (!content) throw new Error("No content received from ERNIE API");
-
-                    // Clean up markdown
-                    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-                    try {
-                        return JSON.parse(cleanContent) as ChatResponse;
-                    } catch (e) {
-                        console.warn("AI did not return valid JSON:", cleanContent);
-                        return { message: cleanContent };
-                    }
-
-                } catch (e: any) {
-                    console.error("ERNIE API failed", e);
-                    return {
-                        message: `⚠️ **ERNIE Error:** ${e.message}. The free API might be rate limited. Try again later.`
-                    };
-                }
-            }
-
-            // --- FREE CHATGPT WRAPPER ---
-            if (provider === 'free-chatgpt') {
-                const prompt = aiService.generateSystemPrompt(message, context);
-
-                try {
-                    // Add a timeout to the fetch request
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-                    const response = await fetch("/api/conversation", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            message: prompt
-                        }),
-                        signal: controller.signal
-                    });
-
-                    clearTimeout(timeoutId);
-
-                    if (!response.ok) throw new Error(`Wrapper Error: ${response.status}`);
-                    const data = await response.json();
-
-                    if (data.status === "success") {
-                        // The wrapper returns the text directly in 'result'
-                        let responseText = data.result;
-
-                        // Check for session expired message and retry
-                        if (responseText && responseText.includes("Session expired, please try again.")) {
-                            if (retryCount < MAX_RETRIES) {
-                                console.log(`Session expired detected. Retrying request... (${retryCount + 1}/${MAX_RETRIES})`);
-                                // Small delay to allow backend to potentially recover or just to avoid spamming
-                                await new Promise(resolve => setTimeout(resolve, 1500));
-                                return aiService.chatWithAI(message, context, retryCount + 1);
-                            } else {
-                                console.warn("Max retries reached for session expiry.");
-                            }
-                        }
-
-                        // Clean up potential markdown
-                        responseText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-                        try {
-                            return JSON.parse(responseText) as ChatResponse;
-                        } catch (e) {
-                            // If not valid JSON, return as message but log warning
-                            console.warn("AI did not return valid JSON:", responseText);
-                            return { message: responseText };
-                        }
-                    } else {
-                        throw new Error(data.message || "Unknown error from wrapper");
-                    }
-                } catch (e: any) {
-                    console.error("Free ChatGPT failed", e);
-                    // Fallback to simulation
-                    return aiService.simulateResponse(message, context);
-                }
-            }
-
-            // --- GPT4FREE (Free, no key needed, OpenAI-compatible) ---
+            // --- GPT4FREE (Primary Locked Provider) ---
             if (provider === 'gpt4free') {
                 const systemPrompt = aiService.generateSystemPrompt(message, context);
                 const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
-                const vmUrl = localStorage.getItem('g4f_vm_url'); // Priority for VM users
-                const endpoint = vmUrl ? `${vmUrl.replace(/\/$/, '')}/api/g4f` : '/api/g4f';
+                const g4fBaseUrl = localStorage.getItem('g4f_vm_url') || '';
+                const endpoint = g4fBaseUrl ? `${g4fBaseUrl}/v1/chat/completions` : '/api/g4f';
 
                 try {
                     const controller = new AbortController();
@@ -1117,6 +910,9 @@ export const aiService = {
         if (!action) return { success: false, error: "No action provided" };
 
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const currentUserId = user?.id || '';
+
             if (action.type === 'UPDATE_PRICE') {
                 const { error } = await supabase
                     .from('products')
@@ -1134,7 +930,8 @@ export const aiService = {
                         product_id: action.payload.productId,
                         quantity: action.payload.quantity,
                         adjustment_type: 'add',
-                        reason: 'AI Auto-Restock'
+                        reason: 'AI Auto-Restock',
+                        adjusted_by: currentUserId
                     });
 
                 // Actually update the stock too
@@ -1148,9 +945,7 @@ export const aiService = {
             }
 
             if (action.type === 'CREATE_PRODUCT') {
-                // We need user_id, let's fetch current session
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session) throw new Error("No active session. Please log in again.");
+                if (!currentUserId) throw new Error("No active session. Please log in again.");
 
                 const { error } = await supabase
                     .from('products')
@@ -1163,7 +958,7 @@ export const aiService = {
                         current_stock: 0,
                         unit_of_measure: 'kg',
                         reorder_level: 10,
-                        user_id: session.user.id
+                        user_id: currentUserId
                     });
 
                 if (error) throw error;
@@ -1182,8 +977,8 @@ export const aiService = {
 
             if (action.type === 'UPDATE_ORDER_STATUS') {
                 const { error } = await supabase
-                    .from('orders')
-                    .update({ status: action.payload.status })
+                    .from('transactions') // Using transactions instead of orders as per type constraints
+                    .update({ notes: `Status Update: ${action.payload.status}` } as any)
                     .eq('id', action.payload.orderId);
 
                 if (error) throw error;
