@@ -9,6 +9,12 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     proxy: {
+      '/api/g4f': {
+        target: 'http://72.60.232.20:1337',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/g4f/, ''),
+        secure: false,
+      },
       '/api/hf': {
         target: 'https://api-inference.huggingface.co',
         changeOrigin: true,

@@ -280,8 +280,8 @@ export const aiService = {
     testConnection: async (config: any): Promise<{ success: boolean; message: string }> => {
         try {
             const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
-            const g4fBaseUrl = localStorage.getItem('g4f_vm_url') || 'http://72.60.232.20:1337';
-            const apiUrl = `${g4fBaseUrl}/v1/chat/completions`;
+            // Use same Vite proxy as chatWithAI
+            const apiUrl = '/api/g4f/v1/chat/completions';
 
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -297,7 +297,7 @@ export const aiService = {
             const content = data.choices?.[0]?.message?.content;
 
             if (content) {
-                return { success: true, message: `✅ GPT4Free Connected to VPS! Model: ${g4fModel}` };
+                return { success: true, message: `✅ GPT4Free Connected! Model: ${g4fModel}. Response: "${content}"` };
             } else {
                 throw new Error('No response content');
             }
@@ -314,13 +314,14 @@ export const aiService = {
         };
     },
 
-    // 9. Chat with AI (Context Aware - Powered by GPT4Free)
+    // 9. Chat with AI (Context Aware - Powered by GPT4Free via local proxy)
     chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }, retryCount = 0): Promise<ChatResponse> => {
         try {
             const { systemPrompt, userMessage } = aiService.generateChatPayload(message, context);
             const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
-            const g4fBaseUrl = localStorage.getItem('g4f_vm_url') || 'http://72.60.232.20:1337';
-            const endpoint = `${g4fBaseUrl}/v1/chat/completions`;
+
+            // Use Vite proxy to avoid CORS: /api/g4f → http://72.60.232.20:1337
+            const endpoint = '/api/g4f/v1/chat/completions';
 
             try {
                 const controller = new AbortController();
@@ -346,24 +347,28 @@ export const aiService = {
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
-                    throw new Error(`G4F Error: ${response.status}`);
+                    throw new Error(`G4F Error: ${response.status} ${await response.text()}`);
                 }
 
                 const data = await response.json();
                 const content = data.choices?.[0]?.message?.content;
 
-                if (!content) throw new Error('No content');
+                if (!content) throw new Error('No content in AI response');
 
+                // Try to parse as JSON action, otherwise treat as plain text
                 const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
                 try {
                     return JSON.parse(cleanContent) as ChatResponse;
                 } catch (e) {
                     return { message: cleanContent };
                 }
             } catch (e: any) {
-                console.error('AI call failed', e);
-                if (e.name === 'AbortError') toast.error("⏳ AI Timeout");
+                console.error('AI call failed:', e.message);
+                if (e.name === 'AbortError') {
+                    toast.error("⏳ AI Timeout — VPS took too long to respond.");
+                } else {
+                    toast.error(`🚫 AI Error: ${e.message}`);
+                }
                 return aiService.simulateResponse(message, context);
             }
         } catch (error: any) {
