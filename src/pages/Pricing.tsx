@@ -41,7 +41,7 @@ const Pricing = () => {
   const [loading, setLoading] = useState(true);
   const [isCreateRuleOpen, setIsCreateRuleOpen] = useState(false);
   const [isApplyRulesOpen, setIsApplyRulesOpen] = useState(false);
-  
+
   const [taxSettings, setTaxSettings] = useState({
     vatRate: "12",
     includeVat: true,
@@ -94,7 +94,7 @@ const Pricing = () => {
     fetchPricingRules();
     fetchPricingLogs();
     fetchProducts();
-    
+
     const savedTaxSettings = localStorage.getItem("taxSettings");
     if (savedTaxSettings) {
       setTaxSettings(JSON.parse(savedTaxSettings));
@@ -228,7 +228,7 @@ const Pricing = () => {
     } catch (error: any) {
       console.error("Error creating rule:", error);
       const errorMsg = error.message || "";
-      
+
       if (errorMsg.includes("duplicate")) {
         toast.error("A pricing rule with this name already exists. Please use a different name.");
       } else if (errorMsg.includes("invalid")) {
@@ -324,7 +324,7 @@ const Pricing = () => {
       }
 
       const multiplier = type === 'increase' ? (1 + percent / 100) : (1 - percent / 100);
-      
+
       let query = supabase.from("products").select("*");
       if (bulkUpdateCategory !== "all") {
         query = query.eq("category", bulkUpdateCategory);
@@ -341,7 +341,7 @@ const Pricing = () => {
       let updatedCount = 0;
       for (const product of productsToUpdate) {
         const newPrice = parseFloat((product.selling_price * multiplier).toFixed(2));
-        
+
         const { error: updateError } = await supabase
           .from("products")
           .update({ selling_price: newPrice })
@@ -368,7 +368,7 @@ const Pricing = () => {
       for (const product of productsToUpdate || []) {
         const currentPrice = Math.floor(product.selling_price);
         const newPrice = currentPrice + 0.99;
-        
+
         if (newPrice !== product.selling_price) {
           const { error: updateError } = await supabase
             .from("products")
@@ -444,18 +444,18 @@ const Pricing = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-4 md:p-6 space-y-6 pb-20 md:pb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Pricing Engine</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold">Pricing Engine</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Configure dynamic pricing rules and tax settings
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Dialog open={isApplyRulesOpen} onOpenChange={setIsApplyRulesOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline">Apply Rules to Products</Button>
+              <Button variant="outline" className="w-full sm:w-auto">Apply Rules to Products</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -489,7 +489,7 @@ const Pricing = () => {
           </Dialog>
           <Dialog open={isCreateRuleOpen} onOpenChange={setIsCreateRuleOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Rule
               </Button>
@@ -615,8 +615,8 @@ const Pricing = () => {
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   <p className="text-xs text-muted-foreground mb-3">{suggestion.message}</p>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700"
                     onClick={() => toast.success(`Applied AI Suggestion: ${suggestion.title}`)}
                   >
@@ -630,14 +630,16 @@ const Pricing = () => {
       )}
 
       <Tabs defaultValue="rules" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
-          <TabsTrigger value="rules">Rules</TabsTrigger>
-          <TabsTrigger value="calculator">Calculator</TabsTrigger>
-          <TabsTrigger value="bulk">Bulk Actions</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="tax">Tax</TabsTrigger>
-          <TabsTrigger value="logs">History</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+          <TabsList className="flex w-max lg:w-auto min-w-full lg:inline-flex bg-muted/50 p-1">
+            <TabsTrigger value="rules" className="px-4">Rules</TabsTrigger>
+            <TabsTrigger value="calculator" className="px-4">Calculator</TabsTrigger>
+            <TabsTrigger value="bulk" className="px-4">Bulk Actions</TabsTrigger>
+            <TabsTrigger value="analytics" className="px-4">Analytics</TabsTrigger>
+            <TabsTrigger value="tax" className="px-4">Tax</TabsTrigger>
+            <TabsTrigger value="logs" className="px-4">History</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="rules" className="space-y-4">
           <div className="space-y-4">
@@ -874,11 +876,11 @@ const Pricing = () => {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button onClick={() => handleBulkUpdate('increase')} className="w-full bg-green-600 hover:bg-green-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                    <Button onClick={() => handleBulkUpdate('increase')} className="w-full bg-green-600 hover:bg-green-700 h-10">
                       <TrendingUp className="mr-2 h-4 w-4" /> Increase
                     </Button>
-                    <Button onClick={() => handleBulkUpdate('decrease')} className="w-full bg-red-600 hover:bg-red-700">
+                    <Button onClick={() => handleBulkUpdate('decrease')} className="w-full bg-red-600 hover:bg-red-700 h-10">
                       <TrendingDown className="mr-2 h-4 w-4" /> Decrease
                     </Button>
                   </div>
