@@ -384,14 +384,14 @@ export default function POS() {
                 </div>
 
                 {/* Categories */}
-                <div className="bg-card p-2 rounded-xl border shadow-sm overflow-x-auto">
+                <div className="bg-card p-2 rounded-xl border shadow-sm overflow-x-auto no-scrollbar">
                     <div className="flex gap-2 min-w-max">
                         {categories.map(cat => (
                             <Button
                                 key={cat}
                                 variant={categoryFilter === cat ? "default" : "outline"}
                                 onClick={() => setCategoryFilter(cat)}
-                                className="capitalize rounded-full px-6"
+                                className="capitalize rounded-full px-4 md:px-6 h-8 md:h-10 text-xs md:text-sm"
                             >
                                 {cat}
                             </Button>
@@ -400,8 +400,8 @@ export default function POS() {
                 </div>
 
                 {/* Product Grid */}
-                <ScrollArea className="flex-1 rounded-xl border bg-card/50 p-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+                <ScrollArea className="flex-1 rounded-xl border bg-card/50 p-2 md:p-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3">
                         {filteredProducts.map(product => (
                             <Card
                                 key={product.id}

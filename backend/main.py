@@ -37,4 +37,4 @@ def chat():
 
 if __name__ == '__main__':
     # Running on 6969 as expected by previous aiService logic
-    app.run(host='0.0.0.0', port=6969)
+    app.run(host='0.0.0.0', port=8080)

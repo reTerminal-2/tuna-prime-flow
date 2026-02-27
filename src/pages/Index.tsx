@@ -106,48 +106,48 @@ const Index = () => {
     : products.filter(p => p.category === category);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       {/* Hero Section */}
-      <div className="bg-primary/5 rounded-2xl p-8 md:p-12 text-center space-y-4">
-        <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">
+      <div className="bg-primary/5 rounded-2xl p-6 md:p-12 text-center space-y-4">
+        <h1 className="text-3xl md:text-5xl font-bold text-primary tracking-tight">
           TunaFlow
         </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+        <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
           Premium quality fresh, frozen, and canned tuna products sourced directly from the best suppliers.
         </p>
-        <div className="flex justify-center gap-4 pt-4">
-          <Button size="lg" className="rounded-full px-8">Shop Now</Button>
-          <Button size="lg" variant="outline" className="rounded-full px-8">View Deals</Button>
+        <div className="flex flex-col sm:flex-row justify-center gap-3 md:gap-4 pt-4">
+          <Button size="lg" className="rounded-full px-8 w-full sm:w-auto">Shop Now</Button>
+          <Button size="lg" variant="outline" className="rounded-full px-8 w-full sm:w-auto">View Deals</Button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-center justify-center">
+      <div className="flex flex-wrap gap-2 items-center justify-center overflow-x-auto pb-2 sm:pb-0 px-2">
         <Button
           variant={category === "all" ? "default" : "outline"}
           onClick={() => setCategory("all")}
-          className="rounded-full"
+          className="rounded-full shrink-0 h-9 text-xs sm:text-sm"
         >
           All Products
         </Button>
         <Button
           variant={category === "fresh" ? "default" : "outline"}
           onClick={() => setCategory("fresh")}
-          className="rounded-full"
+          className="rounded-full shrink-0 h-9 text-xs sm:text-sm"
         >
           Fresh Tuna
         </Button>
         <Button
           variant={category === "frozen" ? "default" : "outline"}
           onClick={() => setCategory("frozen")}
-          className="rounded-full"
+          className="rounded-full shrink-0 h-9 text-xs sm:text-sm"
         >
           Frozen
         </Button>
         <Button
           variant={category === "canned" ? "default" : "outline"}
           onClick={() => setCategory("canned")}
-          className="rounded-full"
+          className="rounded-full shrink-0 h-9 text-xs sm:text-sm"
         >
           Canned
         </Button>
@@ -155,13 +155,13 @@ const Index = () => {
 
       {/* Product Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-64 bg-muted animate-pulse rounded-xl" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {filteredProducts.map((product) => (
             <Card key={product.id} className="group overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow">
               <div className="aspect-square bg-muted relative overflow-hidden">

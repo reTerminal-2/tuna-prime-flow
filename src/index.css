@@ -133,4 +133,25 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 20px);
   }
+
+  /* Mobile Responsive Utilities */
+  .mobile-table-list {
+    @apply block md:table w-full;
+  }
+
+  .mobile-table-header {
+    @apply hidden md:table-header-group;
+  }
+
+  .mobile-table-row {
+    @apply block md:table-row border-b md:border-none p-4 md:p-0;
+  }
+
+  .mobile-table-cell {
+    @apply flex justify-between md:table-cell py-1 md:py-4;
+  }
+
+  .mobile-table-cell-label {
+    @apply md:hidden font-semibold text-muted-foreground mr-2;
+  }
 }

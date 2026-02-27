@@ -216,28 +216,28 @@ export default function SuperAdminDashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-background text-foreground p-8">
-            <div className="max-w-7xl mx-auto space-y-8">
+        <div className="min-h-screen bg-background text-foreground p-4 md:p-8 pb-safe">
+            <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
 
                 {/* Header */}
-                <div className="flex items-center justify-between border-b pb-6 border-border">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-primary/20 rounded-xl">
-                            <ShieldCheck className="w-10 h-10 text-primary" />
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-6 border-border gap-4">
+                    <div className="flex items-center gap-3 md:gap-4">
+                        <div className="p-2 md:p-3 bg-primary/20 rounded-xl">
+                            <ShieldCheck className="w-8 h-8 md:w-10 md:h-10 text-primary" />
                         </div>
                         <div>
-                            <h1 className="text-4xl font-bold tracking-tight">Super Admin Panel</h1>
-                            <p className="text-muted-foreground text-lg">System Control & Configuration</p>
+                            <h1 className="text-2xl md:text-4xl font-bold tracking-tight">Super Admin Panel</h1>
+                            <p className="text-muted-foreground text-sm md:text-lg">System Control & Configuration</p>
                         </div>
                     </div>
-                    <div className="flex gap-3">
-                        <Button variant="outline" size="lg" onClick={loadDashboardData} className="gap-2">
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Button variant="outline" size="lg" onClick={loadDashboardData} className="gap-2 flex-1 sm:flex-none">
                             <Activity className="w-4 h-4" />
-                            Refresh
+                            <span className="hidden sm:inline">Refresh</span>
                         </Button>
-                        <Button variant="outline" size="lg" onClick={handleLogout} className="gap-2">
+                        <Button variant="outline" size="lg" onClick={handleLogout} className="gap-2 flex-1 sm:flex-none">
                             <LogOut className="w-4 h-4" />
-                            Exit Panel
+                            <span className="hidden sm:inline">Exit Panel</span>
                         </Button>
                     </div>
                 </div>

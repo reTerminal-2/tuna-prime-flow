@@ -77,15 +77,15 @@ const StoreLayout = () => {
 
           {/* Search Bar - Mobile Overlay */}
           {isSearchOpen && (
-            <div className="absolute top-0 left-0 w-full h-16 bg-white z-50 flex items-center px-4 border-b animate-in fade-in slide-in-from-top-2">
-              <Search className="absolute left-6 top-6 h-4 w-4 text-muted-foreground" />
+            <div className="absolute top-0 left-0 w-full h-16 bg-white z-50 flex items-center px-4 border-b animate-in fade-in slide-in-from-top-2 shadow-md">
+              <Search className="absolute left-6 top-[1.35rem] h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search products..."
-                className="w-full pl-9 bg-gray-50 border-gray-200 focus:bg-white transition-colors mr-2"
+                className="w-full pl-10 bg-gray-50 border-gray-200 focus:bg-white transition-colors mr-2 rounded-full h-10"
                 autoFocus
               />
-              <Button variant="ghost" size="sm" onClick={() => setIsSearchOpen(false)}>
+              <Button variant="ghost" size="sm" onClick={() => setIsSearchOpen(false)} className="shrink-0">
                 Cancel
               </Button>
             </div>

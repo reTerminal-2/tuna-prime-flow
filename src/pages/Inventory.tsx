@@ -45,14 +45,14 @@ export default function Inventory() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Dialog States
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isAIAddDialogOpen, setIsAIAddDialogOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isStockOpen, setIsStockOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
+
   // Stock Adjustment State
   const [stockAdjustment, setStockAdjustment] = useState({
     type: 'add', // add | remove
@@ -77,7 +77,7 @@ export default function Inventory() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -131,96 +131,96 @@ export default function Inventory() {
   const handleEditProduct = async () => {
     if (!selectedProduct) return;
     try {
-        const { error } = await supabase.from('products').update({
-            name: selectedProduct.name,
-            sku: selectedProduct.sku,
-            category: selectedProduct.category,
-            selling_price: selectedProduct.selling_price,
-            current_stock: selectedProduct.current_stock, // Explicitly allow stock override
-            min_order: selectedProduct.min_order,
-            cost_price: selectedProduct.cost_price,
-            unit_of_measure: selectedProduct.unit_of_measure
-        }).eq('id', selectedProduct.id);
+      const { error } = await supabase.from('products').update({
+        name: selectedProduct.name,
+        sku: selectedProduct.sku,
+        category: selectedProduct.category,
+        selling_price: selectedProduct.selling_price,
+        current_stock: selectedProduct.current_stock, // Explicitly allow stock override
+        min_order: selectedProduct.min_order,
+        cost_price: selectedProduct.cost_price,
+        unit_of_measure: selectedProduct.unit_of_measure
+      }).eq('id', selectedProduct.id);
 
-        if (error) throw error;
-        toast.success("Product updated successfully");
-        setIsEditOpen(false);
-        fetchProducts();
+      if (error) throw error;
+      toast.success("Product updated successfully");
+      setIsEditOpen(false);
+      fetchProducts();
     } catch (err: any) {
-        toast.error(err.message || "Failed to update product");
+      toast.error(err.message || "Failed to update product");
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
-      if (!confirm("Are you sure you want to delete this product?")) return;
-      try {
-          const { error } = await supabase.from('products').delete().eq('id', id);
-          if (error) throw error;
-          toast.success("Product deleted");
-          fetchProducts();
-      } catch (err: any) {
-          toast.error(err.message || "Failed to delete product");
-      }
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    try {
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
+      toast.success("Product deleted");
+      fetchProducts();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete product");
+    }
   };
 
   const handleStockAdjustment = async () => {
-      if (!selectedProduct) return;
-      const qty = parseFloat(stockAdjustment.quantity);
-      if (!qty || qty <= 0) {
-          toast.error("Invalid quantity");
-          return;
-      }
+    if (!selectedProduct) return;
+    const qty = parseFloat(stockAdjustment.quantity);
+    if (!qty || qty <= 0) {
+      toast.error("Invalid quantity");
+      return;
+    }
 
-      try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) throw new Error("No session");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No session");
 
-          // 1. Record Adjustment
-          const { error: adjError } = await supabase.from('stock_adjustments').insert({
-              product_id: selectedProduct.id,
-              quantity: qty,
-              adjustment_type: stockAdjustment.type,
-              reason: stockAdjustment.reason || 'Manual Adjustment',
-              adjusted_by: session.user.id
-          });
-          if (adjError) throw adjError;
+      // 1. Record Adjustment
+      const { error: adjError } = await supabase.from('stock_adjustments').insert({
+        product_id: selectedProduct.id,
+        quantity: qty,
+        adjustment_type: stockAdjustment.type,
+        reason: stockAdjustment.reason || 'Manual Adjustment',
+        adjusted_by: session.user.id
+      });
+      if (adjError) throw adjError;
 
-          // 2. Update Product Stock
-          const newStock = stockAdjustment.type === 'add' 
-              ? selectedProduct.current_stock + qty 
-              : selectedProduct.current_stock - qty;
+      // 2. Update Product Stock
+      const newStock = stockAdjustment.type === 'add'
+        ? selectedProduct.current_stock + qty
+        : selectedProduct.current_stock - qty;
 
-          const { error: prodError } = await supabase.from('products').update({
-              current_stock: newStock
-          }).eq('id', selectedProduct.id);
-          
-          if (prodError) throw prodError;
+      const { error: prodError } = await supabase.from('products').update({
+        current_stock: newStock
+      }).eq('id', selectedProduct.id);
 
-          toast.success("Stock updated");
-          setIsStockOpen(false);
-          setStockAdjustment({ type: 'add', quantity: '', reason: '' });
-          fetchProducts();
-      } catch (err: any) {
-          toast.error(err.message || "Failed to adjust stock");
-      }
+      if (prodError) throw prodError;
+
+      toast.success("Stock updated");
+      setIsStockOpen(false);
+      setStockAdjustment({ type: 'add', quantity: '', reason: '' });
+      fetchProducts();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to adjust stock");
+    }
   };
 
   const openEdit = (product: Product) => {
-      setSelectedProduct(product);
-      setIsEditOpen(true);
+    setSelectedProduct(product);
+    setIsEditOpen(true);
   };
 
   const openStock = (product: Product, type: 'add' | 'remove') => {
-      setSelectedProduct(product);
-      setStockAdjustment({ type, quantity: '', reason: '' });
-      setIsStockOpen(true);
+    setSelectedProduct(product);
+    setStockAdjustment({ type, quantity: '', reason: '' });
+    setIsStockOpen(true);
   };
 
   // Filter Logic
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+
     let matchesTab = true;
     if (activeTab === 'low_stock') matchesTab = p.current_stock <= p.reorder_level;
     if (activeTab === 'out_of_stock') matchesTab = p.current_stock <= 0;
@@ -264,11 +264,11 @@ export default function Inventory() {
             <TabsTrigger value="out_of_stock">Out of Stock</TabsTrigger>
           </TabsList>
         </Tabs>
-        
+
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search products..." 
+          <Input
+            placeholder="Search products..."
             className="pl-8"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -288,72 +288,112 @@ export default function Inventory() {
               <p>No products found matching your criteria.</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{product.sku}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">{product.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className={product.current_stock <= product.reorder_level ? "text-red-500 font-bold" : ""}>
-                        {product.current_stock} {product.unit_of_measure}
-                      </span>
-                    </TableCell>
-                    <TableCell>₱{product.selling_price.toFixed(2)}</TableCell>
-                    <TableCell>
-                      {product.current_stock <= 0 ? (
-                        <Badge variant="destructive">Out of Stock</Badge>
-                      ) : product.current_stock <= product.reorder_level ? (
-                        <Badge variant="secondary" className="text-orange-500">Low Stock</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-green-600 bg-green-50">In Stock</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => openEdit(product)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit Details
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => openStock(product, 'add')}>
-                            <ArrowUpCircle className="mr-2 h-4 w-4 text-green-600" /> Add Stock
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openStock(product, 'remove')}>
-                            <Minus className="mr-2 h-4 w-4 text-red-600" /> Deduct Stock
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteProduct(product.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete Product
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table className="mobile-table-list">
+                <TableHeader className="mobile-table-header">
+                  <TableRow>
+                    <TableHead>Product Name</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Stock</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.map((product) => (
+                    <TableRow key={product.id} className="mobile-table-row relative">
+                      <TableCell className="mobile-table-cell font-bold text-lg md:text-base md:font-medium pb-2 border-b md:border-none">
+                        {product.name}
+                        <div className="md:hidden">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => openEdit(product)}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit Details
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => openStock(product, 'add')}>
+                                <ArrowUpCircle className="mr-2 h-4 w-4 text-green-600" /> Add Stock
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openStock(product, 'remove')}>
+                                <Minus className="mr-2 h-4 w-4 text-red-600" /> Deduct Stock
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteProduct(product.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete Product
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                      <TableCell className="mobile-table-cell">
+                        <span className="mobile-table-cell-label">SKU:</span>
+                        {product.sku}
+                      </TableCell>
+                      <TableCell className="mobile-table-cell">
+                        <span className="mobile-table-cell-label">Category:</span>
+                        <Badge variant="outline" className="capitalize">{product.category}</Badge>
+                      </TableCell>
+                      <TableCell className="mobile-table-cell">
+                        <span className="mobile-table-cell-label">Stock:</span>
+                        <span className={product.current_stock <= product.reorder_level ? "text-red-500 font-bold" : ""}>
+                          {product.current_stock} {product.unit_of_measure}
+                        </span>
+                      </TableCell>
+                      <TableCell className="mobile-table-cell">
+                        <span className="mobile-table-cell-label">Price:</span>
+                        ₱{product.selling_price.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="mobile-table-cell">
+                        <span className="mobile-table-cell-label">Status:</span>
+                        {product.current_stock <= 0 ? (
+                          <Badge variant="destructive">Out of Stock</Badge>
+                        ) : product.current_stock <= product.reorder_level ? (
+                          <Badge variant="secondary" className="text-orange-500">Low Stock</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-green-600 bg-green-50">In Stock</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right hidden md:table-cell">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => openEdit(product)}>
+                              <Edit className="mr-2 h-4 w-4" /> Edit Details
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => openStock(product, 'add')}>
+                              <ArrowUpCircle className="mr-2 h-4 w-4 text-green-600" /> Add Stock
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openStock(product, 'remove')}>
+                              <Minus className="mr-2 h-4 w-4 text-red-600" /> Deduct Stock
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteProduct(product.id)}>
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete Product
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -369,27 +409,27 @@ export default function Inventory() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Name</Label>
-                <Input value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
+                <Input value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>SKU</Label>
-                <Input value={newProduct.sku} onChange={e => setNewProduct({...newProduct, sku: e.target.value})} placeholder="Auto-generated if empty" />
+                <Input value={newProduct.sku} onChange={e => setNewProduct({ ...newProduct, sku: e.target.value })} placeholder="Auto-generated if empty" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Price (₱)</Label>
-                <Input type="number" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} />
+                <Input type="number" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>Stock</Label>
-                <Input type="number" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} />
+                <Input type="number" value={newProduct.stock} onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Category</Label>
-                <Select value={newProduct.category} onValueChange={val => setNewProduct({...newProduct, category: val})}>
+                <Select value={newProduct.category} onValueChange={val => setNewProduct({ ...newProduct, category: val })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="fresh">Fresh</SelectItem>
@@ -400,7 +440,7 @@ export default function Inventory() {
               </div>
               <div className="space-y-2">
                 <Label>Unit</Label>
-                <Input value={newProduct.unit} onChange={e => setNewProduct({...newProduct, unit: e.target.value})} />
+                <Input value={newProduct.unit} onChange={e => setNewProduct({ ...newProduct, unit: e.target.value })} />
               </div>
             </div>
           </div>
@@ -422,39 +462,39 @@ export default function Inventory() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Name</Label>
-                  <Input value={selectedProduct.name} onChange={e => setSelectedProduct({...selectedProduct, name: e.target.value})} />
+                  <Input value={selectedProduct.name} onChange={e => setSelectedProduct({ ...selectedProduct, name: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>SKU</Label>
-                  <Input value={selectedProduct.sku} onChange={e => setSelectedProduct({...selectedProduct, sku: e.target.value})} />
+                  <Input value={selectedProduct.sku} onChange={e => setSelectedProduct({ ...selectedProduct, sku: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Price (₱)</Label>
-                  <Input type="number" value={selectedProduct.selling_price} onChange={e => setSelectedProduct({...selectedProduct, selling_price: parseFloat(e.target.value) || 0})} />
+                  <Input type="number" value={selectedProduct.selling_price} onChange={e => setSelectedProduct({ ...selectedProduct, selling_price: parseFloat(e.target.value) || 0 })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Unit</Label>
-                  <Input value={selectedProduct.unit_of_measure} onChange={e => setSelectedProduct({...selectedProduct, unit_of_measure: e.target.value})} />
+                  <Input value={selectedProduct.unit_of_measure} onChange={e => setSelectedProduct({ ...selectedProduct, unit_of_measure: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Current Stock ({selectedProduct.unit_of_measure})</Label>
-                  <Input 
-                    type="number" 
-                    value={selectedProduct.current_stock} 
-                    onChange={e => setSelectedProduct({...selectedProduct, current_stock: parseFloat(e.target.value) || 0})} 
+                  <Input
+                    type="number"
+                    value={selectedProduct.current_stock}
+                    onChange={e => setSelectedProduct({ ...selectedProduct, current_stock: parseFloat(e.target.value) || 0 })}
                     className="border-orange-200 focus:border-orange-500 bg-orange-50/20"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Min. Order Qty</Label>
-                  <Input 
-                    type="number" 
-                    value={selectedProduct.min_order || 1} 
-                    onChange={e => setSelectedProduct({...selectedProduct, min_order: parseFloat(e.target.value) || 1})} 
+                  <Input
+                    type="number"
+                    value={selectedProduct.min_order || 1}
+                    onChange={e => setSelectedProduct({ ...selectedProduct, min_order: parseFloat(e.target.value) || 1 })}
                   />
                 </div>
               </div>
@@ -479,29 +519,29 @@ export default function Inventory() {
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label>Quantity ({selectedProduct?.unit_of_measure})</Label>
-              <Input 
-                type="number" 
-                value={stockAdjustment.quantity} 
-                onChange={e => setStockAdjustment({...stockAdjustment, quantity: e.target.value})}
+              <Input
+                type="number"
+                value={stockAdjustment.quantity}
+                onChange={e => setStockAdjustment({ ...stockAdjustment, quantity: e.target.value })}
                 autoFocus
               />
             </div>
             <div className="space-y-2">
               <Label>Reason</Label>
-              <Input 
-                value={stockAdjustment.reason} 
-                onChange={e => setStockAdjustment({...stockAdjustment, reason: e.target.value})}
+              <Input
+                value={stockAdjustment.reason}
+                onChange={e => setStockAdjustment({ ...stockAdjustment, reason: e.target.value })}
                 placeholder={stockAdjustment.type === 'add' ? "e.g. New Shipment" : "e.g. Spoilage, Damage"}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsStockOpen(false)}>Cancel</Button>
-            <Button 
-                onClick={handleStockAdjustment} 
-                className={stockAdjustment.type === 'add' ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
+            <Button
+              onClick={handleStockAdjustment}
+              className={stockAdjustment.type === 'add' ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
             >
-                Confirm {stockAdjustment.type === 'add' ? 'Addition' : 'Deduction'}
+              Confirm {stockAdjustment.type === 'add' ? 'Addition' : 'Deduction'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -510,13 +550,13 @@ export default function Inventory() {
       {/* AI Add Dialog (Lazy Loaded) */}
       {isAIAddDialogOpen && (
         <Suspense fallback={<div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50"><RefreshCw className="animate-spin h-8 w-8 text-white" /></div>}>
-          <AIProductForm 
-            open={isAIAddDialogOpen} 
+          <AIProductForm
+            open={isAIAddDialogOpen}
             onOpenChange={setIsAIAddDialogOpen}
             onSuccess={() => {
               fetchProducts();
               toast.success("Product created with AI!");
-            }} 
+            }}
           />
         </Suspense>
       )}
