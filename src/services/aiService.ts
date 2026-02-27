@@ -53,11 +53,11 @@ export interface LearnedPattern {
 }
 
 // --- Off-Topic Detection ---
+// We use a set of keywords to filter out non-business queries. 
+// For "Intelligence", we err on the side of being permissive (False Positives > False Negatives).
 const BUSINESS_KEYWORDS = [
-    // Action verbs — critical for commands like "add product", "create supplier"
     'add', 'create', 'new', 'update', 'edit', 'delete', 'remove', 'list', 'show', 'view',
     'get', 'find', 'check', 'set', 'open', 'give', 'tell', 'calculate', 'generate', 'make',
-    // Domain nouns
     'inventory', 'stock', 'price', 'pricing', 'product', 'supplier', 'order', 'supply', 'demand',
     'revenue', 'profit', 'sales', 'cost', 'margin', 'customer', 'analytics', 'report', 'forecast',
     'restock', 'expiry', 'expiration', 'shrinkage', 'logistics', 'warehouse', 'sku', 'perishable',
@@ -66,16 +66,32 @@ const BUSINESS_KEYWORDS = [
     'cash flow', 'expense', 'roi', 'growth', 'trend', 'category', 'segment', 'risk', 'health',
     'alert', 'low stock', 'overstock', 'dead stock', 'markdown', 'bulk', 'wholesale', 'retail',
     'suggest', 'recommend', 'optimize', 'improve', 'automate', 'scale', 'manage', 'track',
-    // Natural question words — allow general questions so users can ask anything business-related
     'help', 'how', 'what', 'why', 'when', 'which', 'who', 'where', 'can you', 'should i',
     'show me', 'i need', 'i want', 'let me', 'please', 'could you', 'can i', 'would you'
-];
-
+].map(k => k.toLowerCase());
 
 function isBusinessRelated(message: string): boolean {
-    const lower = message.toLowerCase();
-    return BUSINESS_KEYWORDS.some(kw => lower.includes(kw));
+    if (!message) return false;
+    const lower = message.toLowerCase().trim();
+
+    // 1. Short messages (commands/greetings) are ALWAYS allowed
+    // Most commands like "add product", "help me" are under 25 chars.
+    if (lower.length < 25) return true;
+
+    // 2. Check for keywords
+    const hasKeyword = BUSINESS_KEYWORDS.some(kw => lower.includes(kw));
+
+    if (hasKeyword) {
+        return true;
+    }
+
+    // 3. Last fallback: Check if it's a question?
+    if (lower.endsWith('?')) return true;
+
+    console.warn(`[TunaBrain] Blocked unrelated query: "${message}"`);
+    return false;
 }
+
 
 // --- AI Service ---
 
