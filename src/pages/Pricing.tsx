@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, TrendingDown, Clock, Receipt, Plus, Settings2, Sparkles, TrendingUp, DollarSign, BarChart3, Users, Percent, Search } from "lucide-react";
+import { Calculator, TrendingDown, Clock, Receipt, Plus, Settings2, Sparkles, TrendingUp, DollarSign, BarChart3, Users, Percent, Search, Package } from "lucide-react";
 import { toast } from "sonner";
 import { aiService, AIInsight } from "@/services/aiService";
+import { StatCard } from "@/components/superadmin/StatCard";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useIsMobileLayout } from "@/hooks/use-layout-mode";
 
