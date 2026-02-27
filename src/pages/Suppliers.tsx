@@ -183,17 +183,17 @@ const Suppliers = () => {
   const getScore = (id: string) => supplierScores.find(s => s.supplierId === id);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-4 md:p-6 space-y-6 pb-20 md:pb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Suppliers</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold">Suppliers</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Manage your supplier information and contacts
           </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Add Supplier
             </Button>
@@ -292,11 +292,11 @@ const Suppliers = () => {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {suppliers.length === 0 ? (
           <Card className="col-span-full">
-            <CardContent className="py-8 text-center">
-              <UsersIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+            <CardContent className="py-8 text-center text-sm">
+              <UsersIcon className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
               <p className="text-muted-foreground">
                 No suppliers yet. Add your first supplier to get started.
               </p>
@@ -306,17 +306,17 @@ const Suppliers = () => {
           suppliers.map((supplier) => {
             const score = getScore(supplier.id);
             return (
-              <Card key={supplier.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{supplier.name}</span>
-                    <div className="flex items-center gap-2">
+              <Card key={supplier.id} className="shadow-sm">
+                <CardHeader className="p-4 md:p-6 pb-2 md:pb-2">
+                  <CardTitle className="flex items-center justify-between text-base md:text-lg">
+                    <span className="truncate pr-2">{supplier.name}</span>
+                    <div className="flex items-center gap-1 md:gap-2 shrink-0">
                       {score && (
                         <Badge variant={
                           score.grade === 'Platinum' ? 'default' :
                             score.grade === 'Gold' ? 'secondary' :
                               'outline'
-                        } className="flex items-center gap-1">
+                        } className="flex items-center gap-1 text-[9px] md:text-[10px] px-1.5 py-0">
                           <Award className="h-3 w-3" />
                           {score.grade}
                         </Badge>

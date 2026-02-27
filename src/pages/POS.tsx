@@ -322,15 +322,15 @@ export default function POS() {
         <div className="flex flex-col h-[calc(100vh-4rem)] lg:flex-row gap-4 p-2 lg:p-4 bg-muted/20 relative">
 
             {/* LEFT SIDE: PRODUCT CATALOG */}
-            <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+            <div className="flex-1 flex flex-col gap-4 overflow-hidden pb-16 md:pb-0">
                 {/* Top Bar: Search & Customer */}
-                <div className="flex flex-col sm:flex-row gap-4 justify-between bg-card p-3 rounded-xl border shadow-sm">
+                <div className="flex flex-col sm:flex-row gap-3 justify-between bg-card p-2 md:p-3 rounded-xl border shadow-sm">
                     <div className="flex gap-2 flex-1">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search items or scan barcode..."
-                                className="pl-9 bg-background"
+                                placeholder="Search items..."
+                                className="pl-9 h-10 bg-background border-none shadow-inner"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 autoFocus
@@ -338,15 +338,17 @@ export default function POS() {
                         </div>
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" className="w-[200px] justify-between">
-                                    {selectedCustomer ? (
-                                        <span className="flex items-center gap-2"><UserCircle className="h-4 w-4" /> {selectedCustomer.full_name}</span>
-                                    ) : (
-                                        <span className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" /> Walk-in Customer</span>
-                                    )}
+                                <Button variant="outline" className="w-10 md:w-[200px] p-0 md:px-4 md:py-2 justify-center md:justify-between shrink-0">
+                                    <div className="flex items-center gap-2">
+                                        <Users className="h-4 w-4" />
+                                        <span className="hidden md:inline truncate max-w-[120px]">
+                                            {selectedCustomer ? selectedCustomer.full_name : "Walk-in Customer"}
+                                        </span>
+                                    </div>
+                                    <MoreVertical className="h-3 w-3 md:hidden" />
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[250px] p-0" align="end">
+                            <PopoverContent className="w-[280px] p-0" align="end">
                                 <div className="p-2 border-b"><Input placeholder="Search customers..." className="h-8" /></div>
                                 <ScrollArea className="h-[200px]">
                                     <div className="p-1">

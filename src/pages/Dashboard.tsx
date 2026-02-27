@@ -119,23 +119,23 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8 pb-20 md:pb-6">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="hidden md:block">
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             {greeting}, User
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Here's what's happening with your store today.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center text-sm font-medium text-muted-foreground bg-card/50 px-4 py-2 rounded-lg border border-border/50 shadow-sm backdrop-blur-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex items-center text-xs md:text-sm font-medium text-muted-foreground bg-card/50 px-3 py-2 rounded-lg border border-border/50 shadow-sm backdrop-blur-sm">
             <Calendar className="mr-2 h-4 w-4 text-primary" />
             {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
-          <Button className="shadow-lg shadow-primary/20">Download Report</Button>
+          <Button className="shadow-lg shadow-primary/20 w-full sm:w-auto">Download Report</Button>
         </div>
       </div>
 
@@ -185,7 +185,7 @@ const Dashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="z-10 relative">
-                <div className="text-3xl font-bold tracking-tight">₱{stats.todaySales.toLocaleString()}</div>
+                <div className="text-2xl md:text-3xl font-bold tracking-tight">₱{stats.todaySales.toLocaleString()}</div>
                 <div className="flex items-center text-xs text-green-500 mt-1 font-medium">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
                   20.1% <span className="text-muted-foreground ml-1 font-normal">from last month</span>
@@ -204,7 +204,7 @@ const Dashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="z-10 relative">
-                <div className="text-3xl font-bold tracking-tight">+{stats.activeCustomers}</div>
+                <div className="text-2xl md:text-3xl font-bold tracking-tight">+{stats.activeCustomers}</div>
                 <div className="flex items-center text-xs text-green-500 mt-1 font-medium">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
                   180.1% <span className="text-muted-foreground ml-1 font-normal">from last month</span>
@@ -221,7 +221,7 @@ const Dashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="z-10 relative">
-                <div className="text-3xl font-bold tracking-tight">+12,234</div>
+                <div className="text-2xl md:text-3xl font-bold tracking-tight">+12,234</div>
                 <div className="flex items-center text-xs text-green-500 mt-1 font-medium">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
                   19% <span className="text-muted-foreground ml-1 font-normal">from last month</span>
@@ -240,7 +240,7 @@ const Dashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="z-10 relative">
-                <div className="text-3xl font-bold tracking-tight">{stats.totalProducts}</div>
+                <div className="text-2xl md:text-3xl font-bold tracking-tight">{stats.totalProducts}</div>
                 <div className="flex items-center text-xs text-orange-500 mt-1 font-medium">
                   <ArrowDownRight className="h-3 w-3 mr-1" />
                   4 <span className="text-muted-foreground ml-1 font-normal">low stock items</span>

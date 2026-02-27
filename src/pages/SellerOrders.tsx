@@ -180,14 +180,14 @@ const SellerOrders = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
-          <p className="text-muted-foreground">Manage and track your customer orders.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Orders</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage and track your customer orders.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="hidden sm:flex">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <Button variant="outline" className="sm:flex">
             <Filter className="mr-2 h-4 w-4" /> Filter
           </Button>
-          <Button className="shadow-lg shadow-primary/20">
+          <Button className="shadow-lg shadow-primary/20 w-full sm:w-auto">
             <Truck className="mr-2 h-4 w-4" /> Export Shipments
           </Button>
         </div>

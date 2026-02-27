@@ -36,8 +36,8 @@ const Reports = () => {
     if (reportData.totalSales > 0 || reportData.totalProfit > 0) {
       const topProduct = reportData.salesByCategory.length > 0 ? reportData.salesByCategory[0].name : "N/A";
       // Estimate total orders from sales (mock average order value of 500)
-      const totalOrders = Math.floor(reportData.totalSales / 500); 
-      
+      const totalOrders = Math.floor(reportData.totalSales / 500);
+
       setAiSummary(aiService.generateReportSummary({
         totalSales: reportData.totalSales,
         totalOrders,
@@ -62,7 +62,7 @@ const Reports = () => {
       if (transactions && products) {
         const totalSales = transactions.reduce((sum, t) => sum + Number(t.total_amount), 0);
         const totalProfit = transactions.reduce((sum, t) => sum + Number(t.profit), 0);
-        
+
         // Calculate waste (expired products)
         const now = new Date();
         const waste = products
@@ -70,7 +70,7 @@ const Reports = () => {
           .reduce((sum, p) => sum + (Number(p.current_stock) * Number(p.cost_price)), 0);
 
         // Calculate inventory value
-        const inventoryValue = products.reduce((sum, p) => 
+        const inventoryValue = products.reduce((sum, p) =>
           sum + (Number(p.current_stock) * Number(p.cost_price)), 0
         );
 
@@ -125,10 +125,10 @@ const Reports = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-20 md:pb-6">
       <div>
-        <h1 className="text-3xl font-bold">Reports & Analytics</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl md:text-3xl font-bold">Reports & Analytics</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
           View performance insights and analytics
         </p>
       </div>
@@ -144,7 +144,7 @@ const Reports = () => {
           </CardHeader>
           <CardContent>
             <div className="text-sm text-indigo-800 leading-relaxed whitespace-pre-wrap">
-              {aiSummary.split('**').map((part, i) => 
+              {aiSummary.split('**').map((part, i) =>
                 i % 2 === 1 ? <strong key={i}>{part}</strong> : part
               )}
             </div>
@@ -152,14 +152,14 @@ const Reports = () => {
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₱{reportData.totalSales.toFixed(2)}</div>
+            <div className="text-xl md:text-2xl font-bold">₱{reportData.totalSales.toFixed(2)}</div>
           </CardContent>
         </Card>
 
@@ -169,7 +169,7 @@ const Reports = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₱{reportData.totalProfit.toFixed(2)}</div>
+            <div className="text-xl md:text-2xl font-bold">₱{reportData.totalProfit.toFixed(2)}</div>
           </CardContent>
         </Card>
 
@@ -179,7 +179,7 @@ const Reports = () => {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₱{reportData.totalWaste.toFixed(2)}</div>
+            <div className="text-xl md:text-2xl font-bold">₱{reportData.totalWaste.toFixed(2)}</div>
           </CardContent>
         </Card>
 
@@ -189,7 +189,7 @@ const Reports = () => {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₱{reportData.inventoryValue.toFixed(2)}</div>
+            <div className="text-xl md:text-2xl font-bold">₱{reportData.inventoryValue.toFixed(2)}</div>
           </CardContent>
         </Card>
       </div>
