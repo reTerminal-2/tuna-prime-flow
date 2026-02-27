@@ -76,7 +76,7 @@ function isBusinessRelated(message: string): boolean {
 
     // 1. Short messages (commands/greetings) are ALWAYS allowed
     // Most commands like "add product", "help me" are under 25 chars.
-    if (lower.length < 25) return true;
+    return true; // Strict rules disabled per user request
 
     // 2. Check for keywords
     const hasKeyword = BUSINESS_KEYWORDS.some(kw => lower.includes(kw));
