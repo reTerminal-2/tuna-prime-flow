@@ -265,6 +265,7 @@ ${fewShotBlock}`;
         const { systemPrompt, userMessage } = await aiService.generateChatPayload(message, context);
 
         const endpoints = [
+            // Pollinations Direct — Only endpoint
             {
                 url: 'https://text.pollinations.ai/openai',
                 payload: {
@@ -274,15 +275,6 @@ ${fewShotBlock}`;
                         { role: 'user', content: userMessage }
                     ],
                     seed: 42
-                }
-            },
-            {
-                url: 'http://72.60.232.20:3100/chat',
-                payload: {
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userMessage }
-                    ]
                 }
             }
         ];
