@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useIsMobileLayout } from "@/hooks/use-layout-mode";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ import { useAI } from "@/contexts/AIContext";
 import { AIProductForm } from "@/components/ai/AIProductForm";
 
 const AIManager = () => {
+  const isMobileLayout = useIsMobileLayout();
   const navigate = useNavigate();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -73,7 +75,7 @@ const AIManager = () => {
   }, [messages]);
 
   return (
-    <div className="p-4 md:p-6 h-full md:h-[calc(100vh-4rem)] flex flex-col gap-4 md:gap-6 overflow-y-auto md:overflow-hidden pb-20 md:pb-0">
+    <div className={`p-4 ${isMobileLayout ? 'md:p-4' : 'md:p-6'} h-full ${!isMobileLayout ? 'md:h-[calc(100vh-4rem)]' : ''} flex flex-col gap-4 md:gap-6 overflow-y-auto md:overflow-hidden ${isMobileLayout ? 'pb-20' : ''}`}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">

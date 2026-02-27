@@ -1,5 +1,6 @@
 
 import { useState, useEffect, Suspense, lazy } from "react";
+import { useIsMobileLayout } from "@/hooks/use-layout-mode";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ interface Product {
 }
 
 export default function Inventory() {
+  const isMobileLayout = useIsMobileLayout();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -240,7 +242,7 @@ export default function Inventory() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`p-4 ${isMobileLayout ? 'md:p-4' : 'md:p-6'} h-full ${!isMobileLayout ? 'md:h-[calc(100vh-4rem)]' : ''} flex flex-col gap-4 md:gap-6 overflow-y-auto md:overflow-hidden ${isMobileLayout ? 'pb-20' : ''}`}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>

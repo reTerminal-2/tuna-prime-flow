@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
+import { useIsMobileLayout } from "@/hooks/use-layout-mode";
 
 interface Product {
     id: string;
@@ -41,6 +42,7 @@ interface Customer {
 }
 
 export default function POS() {
+    const isMobileLayout = useIsMobileLayout();
     // Add debug logs to verify mounting
     useEffect(() => {
         console.log("POS Component Mounted");
@@ -319,12 +321,12 @@ export default function POS() {
     const categories = ["all", ...Array.from(new Set(products.map(p => p.category || "uncategorized")))];
 
     return (
-        <div className="flex flex-col h-[calc(100vh-4rem)] lg:flex-row gap-4 p-2 lg:p-4 bg-muted/20 relative">
+        <div className={`flex flex-col h-[calc(100vh-4rem)] lg:flex-row gap-4 ${isMobileLayout ? 'p-2' : 'p-4'} bg-muted/20 relative`}>
 
             {/* LEFT SIDE: PRODUCT CATALOG */}
-            <div className="flex-1 flex flex-col gap-4 overflow-hidden pb-16 md:pb-0">
+            <div className={`flex-1 flex flex-col gap-4 overflow-hidden ${isMobileLayout ? 'pb-16' : ''}`}>
                 {/* Top Bar: Search & Customer */}
-                <div className="flex flex-col sm:flex-row gap-2 justify-between bg-card p-2 rounded-xl border shadow-sm">
+                <div className={`flex flex-col sm:flex-row gap-2 justify-between bg-card ${isMobileLayout ? 'p-2' : 'p-3'} rounded-xl border shadow-sm`}>
                     <div className="flex gap-2 w-full">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -404,7 +406,7 @@ export default function POS() {
 
                 {/* Product Grid */}
                 <ScrollArea className="flex-1 rounded-xl border bg-card/50 p-2 md:p-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3">
+                    <div className={`grid ${isMobileLayout ? 'grid-cols-2 gap-2' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'}`}>
                         {filteredProducts.map(product => (
                             <Card
                                 key={product.id}
@@ -435,9 +437,16 @@ export default function POS() {
                                         </div>
                                         <div className="flex justify-between items-center mt-1">
                                             <span className="font-black text-primary text-base sm:text-lg">₱{product.selling_price || 0}</span>
-                                            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
-                                                <Plus className="h-4 w-4" />
-                                            </div>
+                                            {!isMobileLayout && (
+                                                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
+                                                    <Plus className="h-5 w-5" />
+                                                </div>
+                                            )}
+                                            {isMobileLayout && (
+                                                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
+                                                    <Plus className="h-4 w-4" />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </CardContent>
@@ -446,24 +455,29 @@ export default function POS() {
                     </div>
                 </ScrollArea>
 
-                {/* Floating Action Buttons */}
-                <div className="fixed bottom-36 left-6 flex gap-3 z-20 md:hidden">
-                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-700 border-2 border-white/20 active:scale-95 transition-transform" onClick={() => setIsCalculatorOpen(true)}>
-                        <Calculator className="h-6 w-6 text-white" />
-                    </Button>
-                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700 border-2 border-white/20 active:scale-95 transition-transform" onClick={() => setIsAIChatOpen(true)}>
-                        <Sparkles className="h-6 w-6 text-white" />
-                    </Button>
-                </div>
+                {/* Floating Action Buttons - Mobile Only */}
+                {isMobileLayout && (
+                    <div className="fixed bottom-36 left-6 flex gap-3 z-20">
+                        <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-700 border-2 border-white/20 active:scale-95 transition-transform" onClick={() => setIsCalculatorOpen(true)}>
+                            <Calculator className="h-6 w-6 text-white" />
+                        </Button>
+                        <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700 border-2 border-white/20 active:scale-95 transition-transform" onClick={() => setIsAIChatOpen(true)}>
+                            <Sparkles className="h-6 w-6 text-white" />
+                        </Button>
+                    </div>
+                )}
 
-                <div className="hidden md:flex absolute bottom-6 left-6 gap-2 z-20">
-                    <Button size="icon" className="h-12 w-12 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700" onClick={() => setIsCalculatorOpen(true)}>
-                        <Calculator className="h-6 w-6 text-white" />
-                    </Button>
-                    <Button size="icon" className="h-12 w-12 rounded-full shadow-lg bg-purple-600 hover:bg-purple-700" onClick={() => setIsAIChatOpen(true)}>
-                        <Sparkles className="h-6 w-6 text-white" />
-                    </Button>
-                </div>
+                {/* Legacy Action Buttons Position - Desktop Only */}
+                {!isMobileLayout && (
+                    <div className="absolute bottom-6 left-6 gap-2 z-20 hidden md:flex">
+                        <Button size="icon" className="h-12 w-12 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700" onClick={() => setIsCalculatorOpen(true)}>
+                            <Calculator className="h-6 w-6 text-white" />
+                        </Button>
+                        <Button size="icon" className="h-12 w-12 rounded-full shadow-lg bg-purple-600 hover:bg-purple-700" onClick={() => setIsAIChatOpen(true)}>
+                            <Sparkles className="h-6 w-6 text-white" />
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {/* RIGHT SIDE: CART (Desktop) */}
@@ -493,36 +507,38 @@ export default function POS() {
                 />
             </div>
 
-            {/* MOBILE CART: BOTTOM BAR + SHEET */}
-            <div className="lg:hidden fixed bottom-[76px] left-4 right-4 z-50">
-                <Sheet>
-                    <SheetTrigger asChild>
-                        <Button size="lg" className="w-full shadow-2xl text-lg flex justify-between py-7 bg-primary border-t-2 border-white/20 animate-in slide-in-from-bottom duration-300">
-                            <div className="flex items-center gap-2">
-                                <ShoppingCart className="h-6 w-6" />
-                                <span className="font-bold">{cart.reduce((a, c) => a + c.qty, 0)} Items</span>
-                            </div>
-                            <span className="font-black text-xl">₱{grandTotal.toFixed(2)}</span>
-                        </Button>
-                    </SheetTrigger>
-                    <SheetContent side="bottom" className="h-[90vh] flex flex-col p-0 rounded-t-xl">
-                        <SheetHeader className="p-4 border-b flex flex-row items-center justify-between">
-                            <SheetTitle>Current Order</SheetTitle>
-                            <Button variant="ghost" size="sm" onClick={clearCart}>Clear</Button>
-                        </SheetHeader>
-                        <CartList cart={cart} updateQty={updateQty} removeFromCart={removeFromCart} />
-                        <CartSummaryFooter
-                            subtotal={subtotal}
-                            tax={tax}
-                            total={grandTotal}
-                            cartCount={cart.length}
-                            onCheckout={() => setIsPaymentOpen(true)}
-                            onHold={holdOrder}
-                            onDiscount={() => setIsDiscountOpen(true)}
-                        />
-                    </SheetContent>
-                </Sheet>
-            </div>
+            {/* MOBILE CART: BOTTOM BAR + SHEET - Mobile Layout Only */}
+            {isMobileLayout && (
+                <div className="fixed bottom-[76px] left-4 right-4 z-50">
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <Button size="lg" className="w-full shadow-2xl text-lg flex justify-between py-7 bg-primary border-t-2 border-white/20 animate-in slide-in-from-bottom duration-300">
+                                <div className="flex items-center gap-2">
+                                    <ShoppingCart className="h-6 w-6" />
+                                    <span className="font-bold">{cart.reduce((a, c) => a + c.qty, 0)} Items</span>
+                                </div>
+                                <span className="font-black text-xl">₱{grandTotal.toFixed(2)}</span>
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="bottom" className="h-[90vh] flex flex-col p-0 rounded-t-xl">
+                            <SheetHeader className="p-4 border-b flex flex-row items-center justify-between">
+                                <SheetTitle>Current Order</SheetTitle>
+                                <Button variant="ghost" size="sm" onClick={clearCart}>Clear</Button>
+                            </SheetHeader>
+                            <CartList cart={cart} updateQty={updateQty} removeFromCart={removeFromCart} />
+                            <CartSummaryFooter
+                                subtotal={subtotal}
+                                tax={tax}
+                                total={grandTotal}
+                                cartCount={cart.length}
+                                onCheckout={() => setIsPaymentOpen(true)}
+                                onHold={holdOrder}
+                                onDiscount={() => setIsDiscountOpen(true)}
+                            />
+                        </SheetContent>
+                    </Sheet>
+                </div>
+            )}
 
             {/* --- DIALOGS --- */}
 

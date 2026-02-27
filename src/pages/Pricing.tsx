@@ -13,6 +13,7 @@ import { Calculator, TrendingDown, Clock, Receipt, Plus, Settings2, Sparkles, Tr
 import { toast } from "sonner";
 import { aiService, AIInsight } from "@/services/aiService";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useIsMobileLayout } from "@/hooks/use-layout-mode";
 
 interface PricingRule {
   id: string;
@@ -35,6 +36,7 @@ interface Product {
 }
 
 const Pricing = () => {
+  const isMobileLayout = useIsMobileLayout();
   const [rules, setRules] = useState<PricingRule[]>([]);
   const [pricingLogs, setPricingLogs] = useState<any[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -444,158 +446,144 @@ const Pricing = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-20 md:pb-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className={`p-4 ${isMobileLayout ? 'md:p-4' : 'md:p-8'} bg-muted/20 min-h-screen space-y-6`}>
+      <header className={`flex ${isMobileLayout ? 'flex-col gap-4' : 'flex-row items-center justify-between'} mb-8`}>
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Pricing Engine</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Configure dynamic pricing rules and tax settings
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Pricing Engine</h1>
+          <p className="text-muted-foreground italic">Optimize your margins with intelligent pricing</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Dialog open={isApplyRulesOpen} onOpenChange={setIsApplyRulesOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto">Apply Rules to Products</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Apply Pricing Rules</DialogTitle>
-                <DialogDescription>
-                  Apply active pricing rules to products. This will update prices based on configured rules.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Select Category</Label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="fresh">Fresh</SelectItem>
-                      <SelectItem value="frozen">Frozen</SelectItem>
-                      <SelectItem value="canned">Canned</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsApplyRulesOpen(false)}>Cancel</Button>
-                <Button onClick={handleApplyRulesToProducts}>Apply Rules</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Dialog open={isCreateRuleOpen} onOpenChange={setIsCreateRuleOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Rule
+        <div className="flex gap-2">
+          {!isMobileLayout && (
+            <>
+              <Button onClick={() => setIsCreateRuleOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" /> New Rule
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create Pricing Rule</DialogTitle>
-                <DialogDescription>
-                  Define a new pricing rule for your products
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="rule-name">Rule Name</Label>
-                    <Input
-                      id="rule-name"
-                      value={newRule.name}
-                      onChange={(e) => setNewRule({ ...newRule, name: e.target.value })}
-                      placeholder="e.g., Expiring Soon Discount"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="rule-type">Rule Type</Label>
-                    <Select value={newRule.rule_type} onValueChange={(v) => setNewRule({ ...newRule, rule_type: v })}>
-                      <SelectTrigger id="rule-type">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="expiration_based">Expiration Based</SelectItem>
-                        <SelectItem value="age_based">Age Based</SelectItem>
-                        <SelectItem value="demand_based">Demand Based</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Input
-                    id="description"
-                    value={newRule.description}
-                    onChange={(e) => setNewRule({ ...newRule, description: e.target.value })}
-                    placeholder="Optional description"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="condition-days">Condition Days</Label>
-                    <Input
-                      id="condition-days"
-                      type="number"
-                      value={newRule.condition_days}
-                      onChange={(e) => setNewRule({ ...newRule, condition_days: e.target.value })}
-                      placeholder="e.g., 3 days before expiry"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="adjustment">Price Adjustment (%)</Label>
-                    <Input
-                      id="adjustment"
-                      type="number"
-                      step="0.1"
-                      value={newRule.price_adjustment_percent}
-                      onChange={(e) => setNewRule({ ...newRule, price_adjustment_percent: e.target.value })}
-                      placeholder="e.g., -20 for 20% discount"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Applies to Category</Label>
-                    <Select value={newRule.applies_to_category} onValueChange={(v) => setNewRule({ ...newRule, applies_to_category: v })}>
-                      <SelectTrigger id="category">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        <SelectItem value="fresh">Fresh</SelectItem>
-                        <SelectItem value="frozen">Frozen</SelectItem>
-                        <SelectItem value="canned">Canned</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="priority">Priority</Label>
-                    <Input
-                      id="priority"
-                      type="number"
-                      value={newRule.priority}
-                      onChange={(e) => setNewRule({ ...newRule, priority: e.target.value })}
-                      placeholder="1-10"
-                    />
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateRuleOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreateRule}>Create Rule</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              <Button onClick={() => setIsApplyRulesOpen(true)} variant="outline" className="gap-2">
+                <Settings2 className="h-4 w-4" /> Apply Rules
+              </Button>
+            </>
+          )}
+          {isMobileLayout && (
+            <Button onClick={() => setIsCreateRuleOpen(true)} size="icon" className="rounded-full shadow-lg">
+              <Plus className="h-5 w-5" />
+            </Button>
+          )}
         </div>
+      </header>
+
+      {/* Main Stats Row */}
+      <div className={`grid grid-cols-1 ${isMobileLayout ? 'sm:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-4'} gap-4`}>
+        <StatCard title="Active Rules" value={rules.filter(r => r.is_active).length} icon={Percent} trend="+2 this week" />
+        <StatCard title="Total Products" value={products.length} icon={Package} />
+        <StatCard title="Avg. Margin" value="24.5%" icon={BarChart3} trend="+1.2%" />
+        <StatCard title="Price Changes" value={pricingLogs.length} icon={Clock} />
       </div>
 
-      {/* AI Pricing Suggestions */}
+      <Dialog open={isApplyRulesOpen} onOpenChange={setIsApplyRulesOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Apply Pricing Rules</DialogTitle>
+            <DialogDescription>
+              Apply active pricing rules to products. This will update prices based on configured rules.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Select Category</Label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="fresh">Fresh</SelectItem>
+                  <SelectItem value="frozen">Frozen</SelectItem>
+                  <SelectItem value="canned">Canned</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsApplyRulesOpen(false)}>Cancel</Button>
+            <Button onClick={handleApplyRulesToProducts}>Apply Rules</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCreateRuleOpen} onOpenChange={setIsCreateRuleOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create Pricing Rule</DialogTitle>
+            <DialogDescription>
+              Define a new pricing rule for your products
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="rule-name">Rule Name</Label>
+                <Input
+                  id="rule-name"
+                  value={newRule.name}
+                  onChange={(e) => setNewRule({ ...newRule, name: e.target.value })}
+                  placeholder="e.g., Expiring Soon Discount"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rule-type">Rule Type</Label>
+                <Select value={newRule.rule_type} onValueChange={(v) => setNewRule({ ...newRule, rule_type: v })}>
+                  <SelectTrigger id="rule-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expiration_based">Expiration Based</SelectItem>
+                    <SelectItem value="age_based">Age Based</SelectItem>
+                    <SelectItem value="demand_based">Demand Based</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                value={newRule.description}
+                onChange={(e) => setNewRule({ ...newRule, description: e.target.value })}
+                placeholder="Optional description"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="condition-days">Condition Days</Label>
+                <Input
+                  id="condition-days"
+                  type="number"
+                  value={newRule.condition_days}
+                  onChange={(e) => setNewRule({ ...newRule, condition_days: e.target.value })}
+                  placeholder="e.g., 3 days before expiry"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="adjustment">Price Adjustment (%)</Label>
+                <Input
+                  id="adjustment"
+                  type="number"
+                  step="0.1"
+                  value={newRule.price_adjustment_percent}
+                  onChange={(e) => setNewRule({ ...newRule, price_adjustment_percent: e.target.value })}
+                  placeholder="e.g., -20 for 20% discount"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateRuleOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateRule}>Create Rule</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {aiSuggestions.length > 0 && (
         <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
           <CardHeader className="pb-3">
@@ -629,15 +617,15 @@ const Pricing = () => {
         </Card>
       )}
 
+      {/* Pricing Analysis Tabbed Area */}
       <Tabs defaultValue="rules" className="space-y-4">
-        <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
-          <TabsList className="flex w-max lg:w-auto min-w-full lg:inline-flex bg-muted/50 p-1">
-            <TabsTrigger value="rules" className="px-4">Rules</TabsTrigger>
-            <TabsTrigger value="calculator" className="px-4">Calculator</TabsTrigger>
-            <TabsTrigger value="bulk" className="px-4">Bulk Actions</TabsTrigger>
-            <TabsTrigger value="analytics" className="px-4">Analytics</TabsTrigger>
-            <TabsTrigger value="tax" className="px-4">Tax</TabsTrigger>
-            <TabsTrigger value="logs" className="px-4">History</TabsTrigger>
+        <div className={isMobileLayout ? "overflow-x-auto no-scrollbar pb-2" : ""}>
+          <TabsList className={`bg-card border w-full h-12 ${isMobileLayout ? 'justify-start min-w-max px-2' : 'justify-start px-2'}`}>
+            <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><BarChart3 className="h-4 w-4" /> Overview</TabsTrigger>
+            <TabsTrigger value="rules" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Percent className="h-4 w-4" /> Pricing Rules</TabsTrigger>
+            <TabsTrigger value="bulk" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Settings2 className="h-4 w-4" /> Bulk Update</TabsTrigger>
+            <TabsTrigger value="calculator" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Calculator className="h-4 w-4" /> Price Calculator</TabsTrigger>
+            {!isMobileLayout && <TabsTrigger value="logs" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Clock className="h-4 w-4" /> Audit Logs</TabsTrigger>}
           </TabsList>
         </div>
 
@@ -1066,7 +1054,7 @@ const Pricing = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </div >
   );
 };
 

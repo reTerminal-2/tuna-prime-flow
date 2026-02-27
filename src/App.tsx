@@ -135,7 +135,7 @@ const App = () => (
                   <Route path="/mobile/seller/settings" element={<MobileLayout><Settings /></MobileLayout>} />
                   <Route path="/mobile/seller/profile" element={<MobileLayout><StoreProfile /></MobileLayout>} />
                   <Route path="/mobile/seller/shipping" element={<MobileLayout><ShippingSettings /></MobileLayout>} />
-                  <Route path="/mobile/seller/payments" element={<MobileLayout><PaymentSettings /></MainLayout>} />
+                  <Route path="/mobile/seller/payments" element={<MobileLayout><PaymentSettings /></MobileLayout>} />
 
                   {/* Legacy Redirects */}
                   <Route path="/dashboard" element={<Navigate to="/seller/dashboard" replace />} />

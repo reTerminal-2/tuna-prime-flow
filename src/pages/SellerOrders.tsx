@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useIsMobileLayout } from "@/hooks/use-layout-mode";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ interface Order {
 }
 
 const SellerOrders = () => {
+  const isMobileLayout = useIsMobileLayout();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [orderRisks, setOrderRisks] = useState<OrderRisk[]>([]);
@@ -217,137 +219,141 @@ const SellerOrders = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {/* Desktop Table */}
-          <div className="hidden md:block">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableHead className="w-[100px]">Order ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Risk Analysis</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                      No orders found.
-                    </TableCell>
+          {/* Desktop Table - Only in Desktop Layout */}
+          {!isMobileLayout && (
+            <div className="block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableHead className="w-[100px]">Order ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Risk Analysis</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  filteredOrders.map((order) => {
-                    const risk = getRisk(order.id);
-                    return (
-                      <TableRow key={order.id} className="hover:bg-muted/40 transition-colors">
-                        <TableCell className="font-mono text-xs font-medium">#{order.id.slice(0, 8)}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium text-sm">{order.profiles?.full_name || "Unknown"}</span>
-                            <span className="text-xs text-muted-foreground">{order.profiles?.email}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(order.created_at).toLocaleDateString()}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">₱{order.total_amount.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={`capitalize ${getStatusColor(order.status)} border shadow-sm`}>
-                            {order.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {risk && (
-                            <div className="flex items-center gap-2">
-                              {risk.riskLevel === 'Low' ? (
-                                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200 gap-1 rounded-full px-2">
-                                  <ShieldCheck className="h-3 w-3" /> Safe
-                                </Badge>
-                              ) : risk.riskLevel === 'Medium' ? (
-                                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-200 gap-1 rounded-full px-2">
-                                  <AlertTriangle className="h-3 w-3" /> Review
-                                </Badge>
-                              ) : (
-                                <Badge variant="destructive" className="gap-1 rounded-full px-2">
-                                  <AlertTriangle className="h-3 w-3" /> High Risk
-                                </Badge>
-                              )}
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                        No orders found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredOrders.map((order) => {
+                      const risk = getRisk(order.id);
+                      return (
+                        <TableRow key={order.id} className="hover:bg-muted/40 transition-colors">
+                          <TableCell className="font-mono text-xs font-medium">#{order.id.slice(0, 8)}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">{order.profiles?.full_name || "Unknown"}</span>
+                              <span className="text-xs text-muted-foreground">{order.profiles?.email}</span>
                             </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <OrderDetailsDialog
-                            order={order}
-                            risk={risk}
-                            onUpdateStatus={updateStatus}
-                            trigger={
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            }
-                          />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(order.created_at).toLocaleDateString()}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">₱{order.total_amount.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={`capitalize ${getStatusColor(order.status)} border shadow-sm`}>
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {risk && (
+                              <div className="flex items-center gap-2">
+                                {risk.riskLevel === 'Low' ? (
+                                  <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200 gap-1 rounded-full px-2">
+                                    <ShieldCheck className="h-3 w-3" /> Safe
+                                  </Badge>
+                                ) : risk.riskLevel === 'Medium' ? (
+                                  <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-200 gap-1 rounded-full px-2">
+                                    <AlertTriangle className="h-3 w-3" /> Review
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive" className="gap-1 rounded-full px-2">
+                                    <AlertTriangle className="h-3 w-3" /> High Risk
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <OrderDetailsDialog
+                              order={order}
+                              risk={risk}
+                              onUpdateStatus={updateStatus}
+                              trigger={
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-4 p-4 bg-muted/20">
-            {filteredOrders.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground bg-background rounded-lg border border-dashed">
-                No orders found
-              </div>
-            ) : (
-              filteredOrders.map((order) => {
-                const risk = getRisk(order.id);
-                return (
-                  <div key={order.id} className="bg-card rounded-xl border shadow-sm p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs text-muted-foreground">#{order.id.slice(0, 8)}</span>
-                      <Badge variant="outline" className={`capitalize ${getStatusColor(order.status)}`}>
-                        {order.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-sm">{order.profiles?.full_name}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</p>
+          {/* Mobile Cards - Only in Mobile Layout */}
+          {isMobileLayout && (
+            <div className="divide-y divide-border/30">
+              {filteredOrders.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground bg-background rounded-lg border border-dashed">
+                  No orders found
+                </div>
+              ) : (
+                filteredOrders.map((order) => {
+                  const risk = getRisk(order.id);
+                  return (
+                    <div key={order.id} className="bg-card rounded-xl border shadow-sm p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs text-muted-foreground">#{order.id.slice(0, 8)}</span>
+                        <Badge variant="outline" className={`capitalize ${getStatusColor(order.status)}`}>
+                          {order.status}
+                        </Badge>
                       </div>
-                      <p className="font-bold text-lg">₱{order.total_amount.toFixed(2)}</p>
-                    </div>
-                    {risk && risk.riskLevel !== 'Low' && (
-                      <div className="bg-yellow-500/10 p-2 rounded text-xs text-yellow-700 flex items-center gap-2">
-                        <AlertTriangle className="h-3 w-3" />
-                        AI Detected Potential Risk
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-sm">{order.profiles?.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <p className="font-bold text-lg">₱{order.total_amount.toFixed(2)}</p>
                       </div>
-                    )}
-                    <div className="pt-2 border-t flex gap-2">
-                      <OrderDetailsDialog
-                        order={order}
-                        risk={risk}
-                        onUpdateStatus={updateStatus}
-                        trigger={
-                          <Button variant="outline" size="sm" className="w-full">
-                            View Details
-                          </Button>
-                        }
-                      />
+                      {risk && risk.riskLevel !== 'Low' && (
+                        <div className="bg-yellow-500/10 p-2 rounded text-xs text-yellow-700 flex items-center gap-2">
+                          <AlertTriangle className="h-3 w-3" />
+                          AI Detected Potential Risk
+                        </div>
+                      )}
+                      <div className="pt-2 border-t flex gap-2">
+                        <OrderDetailsDialog
+                          order={order}
+                          risk={risk}
+                          onUpdateStatus={updateStatus}
+                          trigger={
+                            <Button variant="outline" size="sm" className="w-full">
+                              View Details
+                            </Button>
+                          }
+                        />
+                      </div>
                     </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
+                  )
+                })
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
