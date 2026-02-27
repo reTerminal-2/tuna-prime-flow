@@ -447,11 +447,11 @@ export default function POS() {
                 </ScrollArea>
 
                 {/* Floating Action Buttons */}
-                <div className="fixed bottom-24 left-6 flex gap-3 z-20 md:hidden">
-                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-700 border-2 border-white/20 active:scale-90 transition-transform" onClick={() => setIsCalculatorOpen(true)}>
+                <div className="fixed bottom-36 left-6 flex gap-3 z-20 md:hidden">
+                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-700 border-2 border-white/20 active:scale-95 transition-transform" onClick={() => setIsCalculatorOpen(true)}>
                         <Calculator className="h-6 w-6 text-white" />
                     </Button>
-                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700 border-2 border-white/20 active:scale-90 transition-transform" onClick={() => setIsAIChatOpen(true)}>
+                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700 border-2 border-white/20 active:scale-95 transition-transform" onClick={() => setIsAIChatOpen(true)}>
                         <Sparkles className="h-6 w-6 text-white" />
                     </Button>
                 </div>
@@ -494,15 +494,15 @@ export default function POS() {
             </div>
 
             {/* MOBILE CART: BOTTOM BAR + SHEET */}
-            <div className="lg:hidden fixed bottom-4 left-4 right-4 z-50">
+            <div className="lg:hidden fixed bottom-[76px] left-4 right-4 z-50">
                 <Sheet>
                     <SheetTrigger asChild>
-                        <Button size="lg" className="w-full shadow-xl text-lg flex justify-between py-6">
+                        <Button size="lg" className="w-full shadow-2xl text-lg flex justify-between py-7 bg-primary border-t-2 border-white/20 animate-in slide-in-from-bottom duration-300">
                             <div className="flex items-center gap-2">
-                                <ShoppingCart className="h-5 w-5" />
-                                <span>{cart.reduce((a, c) => a + c.qty, 0)} Items</span>
+                                <ShoppingCart className="h-6 w-6" />
+                                <span className="font-bold">{cart.reduce((a, c) => a + c.qty, 0)} Items</span>
                             </div>
-                            <span className="font-bold">₱{grandTotal.toFixed(2)}</span>
+                            <span className="font-black text-xl">₱{grandTotal.toFixed(2)}</span>
                         </Button>
                     </SheetTrigger>
                     <SheetContent side="bottom" className="h-[90vh] flex flex-col p-0 rounded-t-xl">
