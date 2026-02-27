@@ -279,104 +279,73 @@ export const aiService = {
     // 11. Test Connection
     testConnection: async (config: any): Promise<{ success: boolean; message: string }> => {
         try {
-            const apiUrl = '/api/g4f/v1/chat/completions';
-
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: 'gpt-4.1-nano',
-                    provider: 'Pollinations',
-                    messages: [{ role: 'user', content: 'Say hello in 3 words.' }],
-                    stream: false
-                })
-            });
-
-            if (!response.ok) throw new Error(`Status: ${response.status}`);
-            const data = await response.json();
-            const content = data.choices?.[0]?.message?.content;
-
-            if (content) {
-                return { success: true, message: `✅ Pollinations + gpt-4.1-nano Connected! Response: "${content}"` };
-            } else {
-                throw new Error('No response content');
-            }
+            const RELAY = 'http://72.60.232.20:3100';
+            const res = await fetch(`${RELAY}/health`);
+            if (!res.ok) throw new Error(`Status ${res.status}`);
+            const data = await res.json();
+            return { success: true, message: `✅ Relay online! Model: ${data.model}, Provider: ${data.provider}` };
         } catch (error: any) {
-            return { success: false, message: `Connection failed: ${error.message}` };
+            return { success: false, message: `Relay unreachable: ${error.message}` };
         }
     },
 
-    // 12. Local Simulation Mode (Fallback)
+    // 12. Simulation fallback (only used if relay is down)
     simulateResponse: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        return {
-            message: "I am currently operating in limited mode. Please check your VPS connection."
-        };
+        await new Promise(resolve => setTimeout(resolve, 300));
+        return { message: "Could not reach the AI right now. Please make sure the VPS relay is running on port 3100." };
     },
 
-    // 9. Chat with AI (Context Aware - Powered by GPT4Free via local proxy)
+    // 9. Chat with AI — sends every prompt to VPS relay → GPT4Free (Pollinations)
     chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }, retryCount = 0): Promise<ChatResponse> => {
+        const { systemPrompt, userMessage } = aiService.generateChatPayload(message, context);
+
+        // VPS relay: has CORS, routes to GPT4Free with Pollinations + locked model
+        const RELAY_URL = 'http://72.60.232.20:3100/chat';
+
         try {
-            const { systemPrompt, userMessage } = aiService.generateChatPayload(message, context);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 50000);
 
-            // Locked to Pollinations provider + gpt-4.1-nano for maximum stability
-            const PROVIDER = 'Pollinations';
-            const MODEL = 'gpt-4.1-nano';
+            const res = await fetch(RELAY_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userMessage }
+                    ]
+                }),
+                signal: controller.signal
+            });
 
-            // Use Vite proxy to avoid CORS: /api/g4f → http://72.60.232.20:1337
-            const endpoint = '/api/g4f/v1/chat/completions';
+            clearTimeout(timeoutId);
 
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: MODEL,
-                        provider: PROVIDER,
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: userMessage }
-                        ],
-                        stream: false
-                    }),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-
-                if (!response.ok) {
-                    throw new Error(`G4F Error: ${response.status} ${await response.text()}`);
-                }
-
-                const data = await response.json();
-                const content = data.choices?.[0]?.message?.content;
-
-                if (!content) throw new Error('No content in AI response');
-
-                // Try to parse as JSON action, otherwise treat as plain text
-                const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-                try {
-                    return JSON.parse(cleanContent) as ChatResponse;
-                } catch (e) {
-                    return { message: cleanContent };
-                }
-            } catch (e: any) {
-                console.error('AI call failed:', e.message);
-                if (e.name === 'AbortError') {
-                    toast.error("⏳ AI Timeout — VPS took too long to respond.");
-                } else {
-                    toast.error(`🚫 AI Error: ${e.message}`);
-                }
-                return aiService.simulateResponse(message, context);
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`Relay error ${res.status}: ${errText}`);
             }
-        } catch (error: any) {
-            console.error("Critical AI Error:", error);
+
+            const data = await res.json();
+            const content = data.choices?.[0]?.message?.content?.trim();
+
+            if (!content) throw new Error('Empty response from AI');
+
+            // Try to parse as JSON action, otherwise return as plain chat
+            const clean = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            try {
+                const parsed = JSON.parse(clean);
+                if (parsed.message) return parsed as ChatResponse;
+            } catch { /* plain text response, fine */ }
+
+            return { message: clean };
+
+        } catch (e: any) {
+            if (e.name === 'AbortError') {
+                toast.error('⏳ AI Timeout — VPS is taking too long.');
+            } else {
+                toast.error(`🚨 AI Relay Error: ${e.message}`);
+            }
+            console.error('[AI] Relay call failed:', e.message);
             return aiService.simulateResponse(message, context);
         }
     },
