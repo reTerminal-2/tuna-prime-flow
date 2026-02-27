@@ -118,10 +118,10 @@ const App = () => (
                   <Route path="/seller/shipping" element={<MainLayout><ShippingSettings /></MainLayout>} />
                   <Route path="/seller/payments" element={<MainLayout><PaymentSettings /></MainLayout>} />
 
-                  {/* Mobile Specific Prefix Routes */}
-                  <Route path="/mobile" element={<Navigate to="/mobile/seller/dashboard" replace />} />
-
                   {/* Mobile Version of Shared Routes */}
+                  <Route path="/mobile" element={<StoreLayout />}>
+                    <Route index element={<Index />} />
+                  </Route>
                   <Route path="/mobile/auth" element={<Auth />} />
                   <Route path="/mobile/seller/dashboard" element={<MobileLayout><Dashboard /></MobileLayout>} />
                   <Route path="/mobile/seller/pos" element={<MobileLayout><POS /></MobileLayout>} />

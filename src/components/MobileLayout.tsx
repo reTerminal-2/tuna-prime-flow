@@ -32,9 +32,10 @@ const MobileLayout = ({ children }: MobileLayoutProps) => {
 
                 if (event === 'SIGNED_OUT' || !session) {
                     setUser(null);
-                    if (!hasNavigatedRef.current) {
+                    // Only redirect if we are on a mobile seller path
+                    if (!hasNavigatedRef.current && location.pathname.includes('/mobile/seller')) {
                         hasNavigatedRef.current = true;
-                        navigate("/auth", { replace: true });
+                        navigate("/mobile/auth", { replace: true });
                         setTimeout(() => hasNavigatedRef.current = false, 100);
                     }
                 } else if (session) {
@@ -48,9 +49,9 @@ const MobileLayout = ({ children }: MobileLayoutProps) => {
             if (!mounted) return;
             if (session) {
                 setUser(session.user);
-            } else if (!hasNavigatedRef.current) {
+            } else if (!hasNavigatedRef.current && location.pathname.includes('/mobile/seller')) {
                 hasNavigatedRef.current = true;
-                navigate("/auth", { replace: true });
+                navigate("/mobile/auth", { replace: true });
                 setTimeout(() => hasNavigatedRef.current = false, 100);
             }
         });
