@@ -27,6 +27,7 @@ import {
 import { useAI } from "@/contexts/AIContext";
 
 import { AIProductForm } from "@/components/ai/AIProductForm";
+import { AIPricingRuleForm } from "@/components/ai/AIPricingRuleForm";
 
 const AIManager = () => {
   const isMobileLayout = useIsMobileLayout();
@@ -53,18 +54,30 @@ const AIManager = () => {
 
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [productFormData, setProductFormData] = useState<any>(undefined);
+
+  const [isPricingRuleFormOpen, setIsPricingRuleFormOpen] = useState(false);
+  const [pricingRuleFormData, setPricingRuleFormData] = useState<any>(undefined);
+
   const [feedbackState, setFeedbackState] = useState<Record<string, 1 | -1>>({});
 
-  // Intercept handleAction to check for OPEN_PRODUCT_FORM
+  // Intercept handleAction to check for modal triggers
   const onHandleAction = async (messageId: string, action: any, approved: boolean) => {
-    if (action.type === 'OPEN_PRODUCT_FORM' && approved) {
-      setProductFormData(action.payload);
-      setIsProductFormOpen(true);
-      // We mark it as completed in the chat immediately for UI feedback
-      // The actual product creation happens in the form
-      handleAction(messageId, action, true);
-      return;
+    if (approved) {
+      if (action.type === 'OPEN_PRODUCT_FORM') {
+        setProductFormData(action.payload);
+        setIsProductFormOpen(true);
+        handleAction(messageId, action, true);
+        return;
+      }
+
+      if (action.type === 'OPEN_PRICING_RULE_FORM') {
+        setPricingRuleFormData(action.payload);
+        setIsPricingRuleFormOpen(true);
+        handleAction(messageId, action, true);
+        return;
+      }
     }
+
     handleAction(messageId, action, approved);
   };
 
@@ -291,8 +304,8 @@ const AIManager = () => {
                                 }}
                                 disabled={!!feedbackState[msg.id]}
                                 className={`p-1 rounded transition-colors ${feedbackState[msg.id] === 1
-                                    ? 'text-green-500 bg-green-500/10'
-                                    : 'text-muted-foreground hover:text-green-500 hover:bg-green-500/10'
+                                  ? 'text-green-500 bg-green-500/10'
+                                  : 'text-muted-foreground hover:text-green-500 hover:bg-green-500/10'
                                   } disabled:cursor-not-allowed`}
                                 title="Helpful"
                               >
@@ -306,8 +319,8 @@ const AIManager = () => {
                                 }}
                                 disabled={!!feedbackState[msg.id]}
                                 className={`p-1 rounded transition-colors ${feedbackState[msg.id] === -1
-                                    ? 'text-red-500 bg-red-500/10'
-                                    : 'text-muted-foreground hover:text-red-500 hover:bg-red-500/10'
+                                  ? 'text-red-500 bg-red-500/10'
+                                  : 'text-muted-foreground hover:text-red-500 hover:bg-red-500/10'
                                   } disabled:cursor-not-allowed`}
                                 title="Not helpful"
                               >
@@ -440,7 +453,14 @@ const AIManager = () => {
         onOpenChange={setIsProductFormOpen}
         initialData={productFormData}
       />
+
+      <AIPricingRuleForm
+        open={isPricingRuleFormOpen}
+        onOpenChange={setIsPricingRuleFormOpen}
+        initialData={pricingRuleFormData}
+      />
     </div>
+
   );
 };
 

@@ -252,6 +252,9 @@ RESPONSE STYLE
 ACTION PROTOCOL
 - If a database action is needed (e.g. update a price, restock an item), return valid JSON:
   { "message": "...", "proposedAction": { "type": "UPDATE_PRICE", "description": "...", "payload": { "productId": "...", "newPrice": 0 } } }
+- If the user wants to ADD a NEW entity (Product, Pricing Rule, Supplier), return valid JSON to open a form window:
+  { "message": "I'll open the project creator for you.", "proposedAction": { "type": "OPEN_PRODUCT_FORM", "description": "Add new product", "payload": { "name": "..." } } }
+  { "message": "Let's set up that pricing rule.", "proposedAction": { "type": "OPEN_PRICING_RULE_FORM", "description": "Add new pricing rule", "payload": { "name": "...", "type": "markdown" } } }
 - Otherwise, respond in plain text/markdown with LaTeX for formulas.
 - Never make irreversible changes without presenting a proposedAction for user approval.
 
@@ -563,6 +566,18 @@ ${fewShotBlock}`;
         } catch {
             return { price: currentPrice, reason: "Manual price used" };
         }
+    },
+
+    generatePricingRuleDescription: async (name: string, type: string): Promise<string> => {
+        const prompt = `Write a professional 15-word description for a pricing rule named "${name}" of type "${type}". Return ONLY text.`;
+        const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
+        return response.message;
+    },
+
+    simulatePricingRuleLogic: async (name: string, type: string, adjustment: number): Promise<string> => {
+        const prompt = `Explain in one sentence how a pricing rule "${name}" (${type}) with a ${adjustment}% adjustment would impact sales and inventory health.`;
+        const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
+        return response.message;
     },
 
     executeAction: async (action: ChatResponse['proposedAction']): Promise<{ success: boolean; error?: string }> => {
