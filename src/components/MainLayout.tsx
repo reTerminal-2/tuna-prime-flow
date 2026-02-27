@@ -281,10 +281,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   if (isLoading || !user) return null;
 
-  if (isMobile) {
-    return <MobileLayout>{children}</MobileLayout>;
-  }
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background selection:bg-primary/20">

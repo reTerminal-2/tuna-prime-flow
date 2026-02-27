@@ -77,22 +77,22 @@ const MobileLayout = ({ children }: MobileLayoutProps) => {
     };
 
     const navItems = [
-        { title: "Dashboard", url: "/seller/dashboard", icon: LayoutDashboard },
-        { title: "Orders", url: "/seller/orders", icon: ShoppingCart },
-        { title: "POS", url: "/seller/pos", icon: Calculator },
-        { title: "Inventory", url: "/seller/inventory", icon: Package },
+        { title: "Dashboard", url: "/mobile/seller/dashboard", icon: LayoutDashboard },
+        { title: "Orders", url: "/mobile/seller/orders", icon: ShoppingCart },
+        { title: "POS", url: "/mobile/seller/pos", icon: Calculator },
+        { title: "Inventory", url: "/mobile/seller/inventory", icon: Package },
     ];
 
     const menuItems = [
-        { title: "AI Manager", url: "/seller/ai", icon: BrainCircuit },
-        { title: "Pricing", url: "/seller/pricing", icon: PhilippinePeso },
-        { title: "Customers", url: "/seller/customers", icon: UserCircle },
-        { title: "Suppliers", url: "/seller/suppliers", icon: Users },
-        { title: "Reports", url: "/seller/reports", icon: BarChart3 },
-        { title: "Store Profile", url: "/seller/profile", icon: Store },
-        { title: "Shipping", url: "/seller/shipping", icon: Truck },
-        { title: "Payments", url: "/seller/payments", icon: CreditCard },
-        { title: "Settings", url: "/seller/settings", icon: Settings },
+        { title: "AI Manager", url: "/mobile/seller/ai", icon: BrainCircuit },
+        { title: "Pricing", url: "/mobile/seller/pricing", icon: PhilippinePeso },
+        { title: "Customers", url: "/mobile/seller/customers", icon: UserCircle },
+        { title: "Suppliers", url: "/mobile/seller/suppliers", icon: Users },
+        { title: "Reports", url: "/mobile/seller/reports", icon: BarChart3 },
+        { title: "Store Profile", url: "/mobile/seller/profile", icon: Store },
+        { title: "Shipping", url: "/mobile/seller/shipping", icon: Truck },
+        { title: "Payments", url: "/mobile/seller/payments", icon: CreditCard },
+        { title: "Settings", url: "/mobile/seller/settings", icon: Settings },
     ];
 
     const isMenuPage = menuItems.some(item => location.pathname === item.url);

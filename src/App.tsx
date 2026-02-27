@@ -2,13 +2,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AIProvider } from "./contexts/AIContext";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 
 // Layouts
 import MainLayout from "./components/MainLayout";
+import MobileLayout from "./components/MobileLayout";
 import StoreLayout from "./components/StoreLayout";
 
 // Eager loaded pages (critical)
@@ -52,6 +53,29 @@ const PageLoader = () => (
   </div>
 );
 
+// Device Redirector Component
+const DeviceRedirector = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isMobilePath = location.pathname.startsWith('/mobile');
+
+    if (isMobileDevice && !isMobilePath) {
+      // Redirect mobile users to /mobile/...
+      const newPath = `/mobile${location.pathname === '/' ? '' : location.pathname}`;
+      navigate(newPath, { replace: true });
+    } else if (!isMobileDevice && isMobilePath) {
+      // Redirect desktop users away from /mobile/...
+      const newPath = location.pathname.replace('/mobile', '') || '/';
+      navigate(newPath, { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -61,48 +85,66 @@ const App = () => (
         <BrowserRouter>
           <AIProvider>
             <Suspense fallback={<PageLoader />}>
-              <Routes>
-                {/* Storefront Routes */}
-                <Route path="/" element={<StoreLayout />}>
-                  <Route index element={<Index />} />
-                  <Route path="product/:id" element={<ProductDetail />} />
-                  <Route path="cart" element={<Cart />} />
-                  <Route path="checkout" element={<Checkout />} />
-                  <Route path="orders" element={<Orders />} />
-                  <Route path="profile" element={<UserProfile />} />
-                </Route>
+              <DeviceRedirector>
+                <Routes>
+                  {/* Storefront Routes */}
+                  <Route path="/" element={<StoreLayout />}>
+                    <Route index element={<Index />} />
+                    <Route path="product/:id" element={<ProductDetail />} />
+                    <Route path="cart" element={<Cart />} />
+                    <Route path="checkout" element={<Checkout />} />
+                    <Route path="orders" element={<Orders />} />
+                    <Route path="profile" element={<UserProfile />} />
+                  </Route>
 
-                {/* Auth Route */}
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/update-password" element={<UpdatePassword />} />
+                  {/* Auth Route */}
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/update-password" element={<UpdatePassword />} />
 
-                {/* Super Admin Routes */}
-                <Route path="/superadmin" element={<SuperAdminLogin />} />
-                <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
+                  {/* Super Admin Routes */}
+                  <Route path="/superadmin" element={<SuperAdminLogin />} />
+                  <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
 
-                {/* Seller Routes */}
-                <Route path="/seller" element={<Navigate to="/seller/dashboard" replace />} />
-                <Route path="/seller/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
-                <Route path="/seller/pos" element={<MainLayout><POS /></MainLayout>} />
-                <Route path="/seller/ai" element={<MainLayout><AIManager /></MainLayout>} />
-                <Route path="/seller/orders" element={<MainLayout><SellerOrders /></MainLayout>} />
-                <Route path="/seller/inventory" element={<MainLayout><Inventory /></MainLayout>} />
-                <Route path="/seller/pricing" element={<MainLayout><Pricing /></MainLayout>} />
-                <Route path="/seller/customers" element={<MainLayout><Customers /></MainLayout>} />
-                <Route path="/seller/suppliers" element={<MainLayout><Suppliers /></MainLayout>} />
-                <Route path="/seller/reports" element={<MainLayout><Reports /></MainLayout>} />
-                <Route path="/seller/settings" element={<MainLayout><Settings /></MainLayout>} />
-                <Route path="/seller/profile" element={<MainLayout><StoreProfile /></MainLayout>} />
-                <Route path="/seller/shipping" element={<MainLayout><ShippingSettings /></MainLayout>} />
-                <Route path="/seller/payments" element={<MainLayout><PaymentSettings /></MainLayout>} />
+                  {/* Seller Routes (Desktop) */}
+                  <Route path="/seller" element={<Navigate to="/seller/dashboard" replace />} />
+                  <Route path="/seller/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
+                  <Route path="/seller/pos" element={<MainLayout><POS /></MainLayout>} />
+                  <Route path="/seller/ai" element={<MainLayout><AIManager /></MainLayout>} />
+                  <Route path="/seller/orders" element={<MainLayout><SellerOrders /></MainLayout>} />
+                  <Route path="/seller/inventory" element={<MainLayout><Inventory /></MainLayout>} />
+                  <Route path="/seller/pricing" element={<MainLayout><Pricing /></MainLayout>} />
+                  <Route path="/seller/customers" element={<MainLayout><Customers /></MainLayout>} />
+                  <Route path="/seller/suppliers" element={<MainLayout><Suppliers /></MainLayout>} />
+                  <Route path="/seller/reports" element={<MainLayout><Reports /></MainLayout>} />
+                  <Route path="/seller/settings" element={<MainLayout><Settings /></MainLayout>} />
+                  <Route path="/seller/profile" element={<MainLayout><StoreProfile /></MainLayout>} />
+                  <Route path="/seller/shipping" element={<MainLayout><ShippingSettings /></MainLayout>} />
+                  <Route path="/seller/payments" element={<MainLayout><PaymentSettings /></MainLayout>} />
 
-                {/* Legacy Redirects */}
-                <Route path="/dashboard" element={<Navigate to="/seller/dashboard" replace />} />
-                <Route path="/inventory" element={<Navigate to="/seller/inventory" replace />} />
+                  {/* Mobile Specific Routes */}
+                  <Route path="/mobile" element={<Navigate to="/mobile/seller/dashboard" replace />} />
+                  <Route path="/mobile/seller/dashboard" element={<MobileLayout><Dashboard /></MobileLayout>} />
+                  <Route path="/mobile/seller/pos" element={<MobileLayout><POS /></MobileLayout>} />
+                  <Route path="/mobile/seller/ai" element={<MobileLayout><AIManager /></MobileLayout>} />
+                  <Route path="/mobile/seller/orders" element={<MobileLayout><SellerOrders /></MobileLayout>} />
+                  <Route path="/mobile/seller/inventory" element={<MobileLayout><Inventory /></MobileLayout>} />
+                  <Route path="/mobile/seller/pricing" element={<MobileLayout><Pricing /></MobileLayout>} />
+                  <Route path="/mobile/seller/customers" element={<MobileLayout><Customers /></MobileLayout>} />
+                  <Route path="/mobile/seller/suppliers" element={<MobileLayout><Suppliers /></MobileLayout>} />
+                  <Route path="/mobile/seller/reports" element={<MobileLayout><Reports /></MobileLayout>} />
+                  <Route path="/mobile/seller/settings" element={<MobileLayout><Settings /></MobileLayout>} />
+                  <Route path="/mobile/seller/profile" element={<MobileLayout><StoreProfile /></MobileLayout>} />
+                  <Route path="/mobile/seller/shipping" element={<MobileLayout><ShippingSettings /></MobileLayout>} />
+                  <Route path="/mobile/seller/payments" element={<MobileLayout><PaymentSettings /></MainLayout>} />
 
-                {/* Catch-all */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+                  {/* Legacy Redirects */}
+                  <Route path="/dashboard" element={<Navigate to="/seller/dashboard" replace />} />
+                  <Route path="/inventory" element={<Navigate to="/seller/inventory" replace />} />
+
+                  {/* Catch-all */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </DeviceRedirector>
             </Suspense>
           </AIProvider>
         </BrowserRouter>
