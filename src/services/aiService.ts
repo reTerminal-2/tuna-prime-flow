@@ -279,16 +279,16 @@ export const aiService = {
     // 11. Test Connection
     testConnection: async (config: any): Promise<{ success: boolean; message: string }> => {
         try {
-            const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
-            // Use same Vite proxy as chatWithAI
             const apiUrl = '/api/g4f/v1/chat/completions';
 
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: g4fModel,
-                    messages: [{ role: 'user', content: 'Say hello in 3 words.' }]
+                    model: 'gpt-4.1-nano',
+                    provider: 'Pollinations',
+                    messages: [{ role: 'user', content: 'Say hello in 3 words.' }],
+                    stream: false
                 })
             });
 
@@ -297,12 +297,12 @@ export const aiService = {
             const content = data.choices?.[0]?.message?.content;
 
             if (content) {
-                return { success: true, message: `✅ GPT4Free Connected! Model: ${g4fModel}. Response: "${content}"` };
+                return { success: true, message: `✅ Pollinations + gpt-4.1-nano Connected! Response: "${content}"` };
             } else {
                 throw new Error('No response content');
             }
         } catch (error: any) {
-            return { success: false, message: `G4F Connection failed: ${error.message}` };
+            return { success: false, message: `Connection failed: ${error.message}` };
         }
     },
 
@@ -318,7 +318,10 @@ export const aiService = {
     chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }, retryCount = 0): Promise<ChatResponse> => {
         try {
             const { systemPrompt, userMessage } = aiService.generateChatPayload(message, context);
-            const g4fModel = localStorage.getItem('g4f_model') || 'gpt-4o-mini';
+
+            // Locked to Pollinations provider + gpt-4.1-nano for maximum stability
+            const PROVIDER = 'Pollinations';
+            const MODEL = 'gpt-4.1-nano';
 
             // Use Vite proxy to avoid CORS: /api/g4f → http://72.60.232.20:1337
             const endpoint = '/api/g4f/v1/chat/completions';
@@ -334,7 +337,8 @@ export const aiService = {
                         'Accept': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: g4fModel,
+                        model: MODEL,
+                        provider: PROVIDER,
                         messages: [
                             { role: 'system', content: systemPrompt },
                             { role: 'user', content: userMessage }
