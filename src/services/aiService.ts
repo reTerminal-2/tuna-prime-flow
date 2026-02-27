@@ -255,6 +255,9 @@ ACTION PROTOCOL
 - If the user wants to ADD a NEW entity (Product, Pricing Rule, Supplier), return valid JSON to open a form window:
   { "message": "I'll open the project creator for you.", "proposedAction": { "type": "OPEN_PRODUCT_FORM", "description": "Add new product", "payload": { "name": "..." } } }
   { "message": "Let's set up that pricing rule.", "proposedAction": { "type": "OPEN_PRICING_RULE_FORM", "description": "Add new pricing rule", "payload": { "name": "...", "type": "markdown" } } }
+  { "message": "I'll open the supplier onboarding form.", "proposedAction": { "type": "OPEN_SUPPLIER_FORM", "description": "Add new supplier", "payload": { "name": "..." } } }
+- If the user wants to adjust stock or log a correction:
+  { "message": "Let's log that stock adjustment.", "proposedAction": { "type": "OPEN_STOCK_ADJUSTMENT_FORM", "description": "Adjust stock levels", "payload": { "productId": "...", "type": "in/out" } } }
 - Otherwise, respond in plain text/markdown with LaTeX for formulas.
 - Never make irreversible changes without presenting a proposedAction for user approval.
 
@@ -576,6 +579,18 @@ ${fewShotBlock}`;
 
     simulatePricingRuleLogic: async (name: string, type: string, adjustment: number): Promise<string> => {
         const prompt = `Explain in one sentence how a pricing rule "${name}" (${type}) with a ${adjustment}% adjustment would impact sales and inventory health.`;
+        const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
+        return response.message;
+    },
+
+    vetSupplier: async (name: string): Promise<string> => {
+        const prompt = `Provide a professional 20-word vetting note/risk assessment for a new supplier named "${name}" in the seafood/tuna industry. Return ONLY text.`;
+        const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
+        return response.message;
+    },
+
+    generateStockAdjustmentReason: async (product: string, type: string, qty: number): Promise<string> => {
+        const prompt = `Generate a professional 10-word reason for a stock adjustment of ${qty} units (${type}) for "${product}". Return ONLY text.`;
         const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
         return response.message;
     },

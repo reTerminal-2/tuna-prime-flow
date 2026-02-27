@@ -28,6 +28,8 @@ import { useAI } from "@/contexts/AIContext";
 
 import { AIProductForm } from "@/components/ai/AIProductForm";
 import { AIPricingRuleForm } from "@/components/ai/AIPricingRuleForm";
+import { AISupplierForm } from "@/components/ai/AISupplierForm";
+import { AIStockAdjustmentForm } from "@/components/ai/AIStockAdjustmentForm";
 
 const AIManager = () => {
   const isMobileLayout = useIsMobileLayout();
@@ -58,6 +60,12 @@ const AIManager = () => {
   const [isPricingRuleFormOpen, setIsPricingRuleFormOpen] = useState(false);
   const [pricingRuleFormData, setPricingRuleFormData] = useState<any>(undefined);
 
+  const [isSupplierFormOpen, setIsSupplierFormOpen] = useState(false);
+  const [supplierFormData, setSupplierFormData] = useState<any>(undefined);
+
+  const [isStockAdjFormOpen, setIsStockAdjFormOpen] = useState(false);
+  const [stockAdjFormData, setStockAdjFormData] = useState<any>(undefined);
+
   const [feedbackState, setFeedbackState] = useState<Record<string, 1 | -1>>({});
 
   // Intercept handleAction to check for modal triggers
@@ -73,6 +81,20 @@ const AIManager = () => {
       if (action.type === 'OPEN_PRICING_RULE_FORM') {
         setPricingRuleFormData(action.payload);
         setIsPricingRuleFormOpen(true);
+        handleAction(messageId, action, true);
+        return;
+      }
+
+      if (action.type === 'OPEN_SUPPLIER_FORM') {
+        setSupplierFormData(action.payload);
+        setIsSupplierFormOpen(true);
+        handleAction(messageId, action, true);
+        return;
+      }
+
+      if (action.type === 'OPEN_STOCK_ADJUSTMENT_FORM') {
+        setStockAdjFormData(action.payload);
+        setIsStockAdjFormOpen(true);
         handleAction(messageId, action, true);
         return;
       }
@@ -458,6 +480,18 @@ const AIManager = () => {
         open={isPricingRuleFormOpen}
         onOpenChange={setIsPricingRuleFormOpen}
         initialData={pricingRuleFormData}
+      />
+
+      <AISupplierForm
+        open={isSupplierFormOpen}
+        onOpenChange={setIsSupplierFormOpen}
+        initialData={supplierFormData}
+      />
+
+      <AIStockAdjustmentForm
+        open={isStockAdjFormOpen}
+        onOpenChange={setIsStockAdjFormOpen}
+        initialData={stockAdjFormData}
       />
     </div>
 
