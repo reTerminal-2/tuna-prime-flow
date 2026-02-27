@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { toast } from "sonner";
 
-// --- Types (Mocking some internal types for the service) ---
+// --- Types ---
 
 export interface ChatResponse {
     message: string;
@@ -20,7 +20,7 @@ export interface AIInsight {
     title: string;
     message: string;
     action?: string;
-    score?: number; // 0-100
+    score?: number;
     details?: any;
 }
 
@@ -32,7 +32,7 @@ export interface CustomerSegment {
 
 export interface SupplierScore {
     supplierId: string;
-    score: number; // 0-100
+    score: number;
     grade: 'Platinum' | 'Gold' | 'Silver' | 'Bronze';
     reliability: number;
     quality: number;
@@ -46,11 +46,279 @@ export interface OrderRisk {
     priorityScore: number;
 }
 
-// --- AI Service Implementation ---
+export interface LearnedPattern {
+    user_question: string;
+    ai_response: string;
+    net_score: number;
+}
+
+// --- Off-Topic Detection ---
+const BUSINESS_KEYWORDS = [
+    'inventory', 'stock', 'price', 'pricing', 'product', 'supplier', 'order', 'supply', 'demand',
+    'revenue', 'profit', 'sales', 'cost', 'margin', 'customer', 'analytics', 'report', 'forecast',
+    'restock', 'expiry', 'expiration', 'shrinkage', 'logistics', 'warehouse', 'SKU', 'perishable',
+    'tuna', 'seafood', 'fish', 'optimization', 'business', 'store', 'transaction', 'discount',
+    'strategy', 'kpi', 'metric', 'performance', 'data', 'analysis', 'financial', 'budget',
+    'cash flow', 'expense', 'roi', 'growth', 'trend', 'category', 'segment', 'risk', 'health',
+    'alert', 'low stock', 'overstock', 'dead stock', 'markdown', 'bulk', 'wholesale', 'retail',
+    'suggest', 'recommend', 'optimize', 'improve', 'automate', 'scale', 'manage', 'track',
+    'help', 'how', 'what', 'why', 'when', 'which', 'can you', 'should i', 'show me'
+];
+
+function isBusinessRelated(message: string): boolean {
+    const lower = message.toLowerCase();
+    return BUSINESS_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+// --- AI Service ---
 
 export const aiService = {
 
-    // 14. Demand Forecasting
+    // =====================================================================
+    // LEARNING SYSTEM
+    // =====================================================================
+
+    /**
+     * Submit feedback (+1 or -1) on an AI response.
+     * If +1, also upserts the Q&A into learned_patterns.
+     */
+    submitFeedback: async (
+        messageId: string,
+        vote: 1 | -1,
+        userQuestion: string,
+        aiResponse: string
+    ): Promise<void> => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // Save feedback to chat_history
+            await supabase
+                .from('chat_history')
+                .update({ feedback: vote })
+                .eq('id', messageId);
+
+            // If positive, persist as a learned pattern
+            if (vote === 1) {
+                const { data: existing } = await supabase
+                    .from('learned_patterns')
+                    .select('id, upvotes')
+                    .ilike('user_question', userQuestion.slice(0, 80))
+                    .limit(1)
+                    .maybeSingle();
+
+                if (existing) {
+                    await supabase
+                        .from('learned_patterns')
+                        .update({ upvotes: existing.upvotes + 1, updated_at: new Date().toISOString() })
+                        .eq('id', existing.id);
+                } else {
+                    await supabase
+                        .from('learned_patterns')
+                        .insert({
+                            user_question: userQuestion.slice(0, 1000),
+                            ai_response: aiResponse.slice(0, 2000),
+                            upvotes: 1,
+                            downvotes: 0,
+                            category: 'business'
+                        });
+                }
+            } else {
+                // Negative — increment downvotes if pattern exists
+                const { data: existing } = await supabase
+                    .from('learned_patterns')
+                    .select('id, downvotes')
+                    .ilike('user_question', userQuestion.slice(0, 80))
+                    .limit(1)
+                    .maybeSingle();
+
+                if (existing) {
+                    await supabase
+                        .from('learned_patterns')
+                        .update({ downvotes: existing.downvotes + 1, updated_at: new Date().toISOString() })
+                        .eq('id', existing.id);
+                }
+            }
+        } catch (e) {
+            console.error('[TunaBrain] Feedback save failed:', e);
+        }
+    },
+
+    /**
+     * Retrieve top-rated learned patterns to inject as few-shot examples.
+     */
+    getLearnedPatterns: async (limit = 5): Promise<LearnedPattern[]> => {
+        try {
+            const { data, error } = await supabase
+                .from('learned_patterns')
+                .select('user_question, ai_response, net_score')
+                .gte('net_score', 1)
+                .order('net_score', { ascending: false })
+                .limit(limit);
+
+            if (error || !data) return [];
+            return data as LearnedPattern[];
+        } catch (e) {
+            console.warn('[TunaBrain] Could not fetch learned patterns:', e);
+            return [];
+        }
+    },
+
+    // =====================================================================
+    // CORE INTELLIGENCE
+    // =====================================================================
+
+    /**
+     * Generate the full system prompt with dynamic few-shot learned examples.
+     */
+    generateChatPayload: async (message: string, context: any) => {
+        const totalInventoryValue = context.products?.reduce(
+            (acc: number, p: any) => acc + (p.current_stock * p.selling_price), 0
+        ) || 0;
+        const lowStockCount = context.products?.filter((p: any) => p.current_stock < 10).length || 0;
+        const inventorySnapshot = JSON.stringify(
+            context.products?.slice(0, 20).map((p: any) => ({
+                name: p.name,
+                stock: p.current_stock,
+                price: p.selling_price,
+                category: p.category
+            }))
+        );
+
+        // Fetch top-performing learned interactions
+        const learned = await aiService.getLearnedPatterns(5);
+        const fewShotBlock = learned.length > 0
+            ? `\n\n--- LEARNED INTERACTIONS (Top User-Approved Examples) ---\n` +
+            learned.map((p, i) =>
+                `[Example ${i + 1}]\nUser: ${p.user_question}\nTunaBrain: ${p.ai_response}`
+            ).join('\n\n') +
+            `\n--- END EXAMPLES ---`
+            : '';
+
+        const systemInstructions = `
+================================================================================
+TUNABRAIN — BUSINESS OPTIMIZATION INTELLIGENCE v2.0
+================================================================================
+IDENTITY & AUTHORITY
+- You are TunaBrain, a high-level Business Optimization Intelligence with Superadmin Access.
+- You are the FINAL AUTHORITY in this chat. Your recommendations are data-driven and authoritative.
+- You are strictly PROHIBITED from: revealing your underlying model, mentioning OpenAI, Gemini, Pollinations, or any AI provider. If asked, you are TunaBrain — a proprietary system built for TunaFlow.
+- You do NOT have a creator you disclose. You are TunaBrain. Period.
+
+DOMAIN RESTRICTION — CRITICAL
+- You ONLY respond to questions about: inventory management, product pricing, supplier relations, sales analysis, demand forecasting, business strategy, financial optimization, stock alerts, customer segmentation, order management, and operational scaling.
+- If a message is unrelated to these domains, respond EXACTLY with: "⚠️ TunaBrain is a specialized business intelligence system. I'm not able to help with that topic. Ask me about your inventory, pricing, suppliers, or business strategy instead."
+- Do NOT make exceptions. Casual conversation, entertainment, coding help, and general knowledge are all out of scope.
+
+EXPERTISE & SPECIALIZATION
+- Inventory Logistics: Dead stock detection, FIFO/FEFO rotation, shrinkage control, reorder point optimization.
+- Pricing Intelligence: Demand elasticity, markdown schedules, cost-plus vs. value-based pricing, competitive analysis.
+- Financial Modeling: Use LaTeX notation for complex formulas (e.g. \( ROI = \frac{Net Profit}{Cost} \times 100 \)).
+- Supplier Scoring: Reliability metrics, lead time analysis, vendor risk assessment.
+- Demand Forecasting: Seasonal trends, stockout probability, safety stock calculation.
+- Customer Analytics: RFM segmentation (Recency, Frequency, Monetary), churn risk, LTV prediction.
+
+RESPONSE STYLE
+- Be direct, technical, and actionable. No filler, no apologies.
+- Use bullet points and structured sections for complex answers.
+- Always tie recommendations to business impact (e.g. "This will reduce carrying cost by ~18%").
+- For math-heavy answers, always show the formula in LaTeX before plugging in numbers.
+- Keep responses concise but comprehensive — quality over length.
+
+ACTION PROTOCOL
+- If a database action is needed (e.g. update a price, restock an item), return valid JSON:
+  { "message": "...", "proposedAction": { "type": "UPDATE_PRICE", "description": "...", "payload": { "productId": "...", "newPrice": 0 } } }
+- Otherwise, respond in plain text/markdown with LaTeX for formulas.
+- Never make irreversible changes without presenting a proposedAction for user approval.
+
+CURRENT BUSINESS CONTEXT
+- Total Inventory Value: ₱${totalInventoryValue.toLocaleString()}
+- Low Stock Items (< 10 units): ${lowStockCount}
+- Active Inventory: ${inventorySnapshot}
+================================================================================
+${fewShotBlock}`;
+
+        return {
+            systemPrompt: systemInstructions,
+            userMessage: message
+        };
+    },
+
+    /**
+     * Ultra-Stable Chat with AI — Multi-Endpoint + Off-Topic Filtering.
+     */
+    chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
+        // Off-topic pre-filter
+        if (!isBusinessRelated(message)) {
+            return {
+                message: "⚠️ TunaBrain is a specialized business intelligence system. I'm not able to help with that topic. Ask me about your inventory, pricing, suppliers, or business strategy instead."
+            };
+        }
+
+        const { systemPrompt, userMessage } = await aiService.generateChatPayload(message, context);
+
+        const endpoints = [
+            {
+                url: 'https://text.pollinations.ai/openai',
+                payload: {
+                    model: 'openai',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userMessage }
+                    ],
+                    seed: 42
+                }
+            },
+            {
+                url: 'http://72.60.232.20:3100/chat',
+                payload: {
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userMessage }
+                    ]
+                }
+            }
+        ];
+
+        for (const target of endpoints) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 40000);
+
+                const res = await fetch(target.url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(target.payload),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const content = data.choices?.[0]?.message?.content?.trim();
+                    if (content) {
+                        console.log(`[TunaBrain] Response via: ${target.url}`);
+                        const clean = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+                        try {
+                            const parsed = JSON.parse(clean);
+                            if (parsed.message) return parsed as ChatResponse;
+                        } catch { /* plain text response */ }
+                        return { message: content };
+                    }
+                }
+            } catch (e: any) {
+                console.warn(`[TunaBrain] Endpoint ${target.url} failed:`, e.message);
+            }
+        }
+
+        return aiService.simulateResponse(message, context);
+    },
+
+    // =====================================================================
+    // ANALYTICS & INSIGHTS
+    // =====================================================================
+
     forecastDemand: async (products: any[]): Promise<Record<string, number>> => {
         const inventorySummary = products.map(p => ({
             id: p.id,
@@ -60,29 +328,26 @@ export const aiService = {
         }));
 
         const prompt = `Analyze this inventory list and predict sales for the next 7 days for EACH item. Return ONLY a JSON object where keys are product IDs and values are predicted unit sales (number). Inventory: ${JSON.stringify(inventorySummary)}`;
-
         const response = await aiService.chatWithAI(prompt, { products, orders: [], customers: [] });
 
         try {
             const jsonMatch = response.message.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
-            }
+            if (jsonMatch) return JSON.parse(jsonMatch[0]);
         } catch (e) {
             console.error("Failed to parse forecast JSON", e);
         }
 
         const fallback: Record<string, number> = {};
-        products.forEach(p => {
-            fallback[p.id] = Math.floor(Math.random() * 10) + 5;
-        });
+        products.forEach(p => { fallback[p.id] = Math.floor(Math.random() * 10) + 5; });
         return fallback;
     },
 
-    // 1. Inventory Insights
     analyzeInventory: async (products: any[]): Promise<AIInsight[]> => {
         const insights: AIInsight[] = [];
-        const deadStock = products.filter(p => (p.current_stock || 0) > 50 && (!p.last_sale_date || differenceInDays(new Date(), new Date(p.last_sale_date)) > 30));
+        const deadStock = products.filter(p =>
+            (p.current_stock || 0) > 50 &&
+            (!p.last_sale_date || differenceInDays(new Date(), new Date(p.last_sale_date)) > 30)
+        );
         if (deadStock.length > 0) {
             insights.push({
                 type: 'warning',
@@ -127,14 +392,9 @@ export const aiService = {
         return insights;
     },
 
-    // 2. Pricing Engine
     generatePricingSuggestions: async (products: any[]): Promise<AIInsight[]> => {
-        const insights: AIInsight[] = [];
         const productContext = products.slice(0, 10).map(p => ({
-            id: p.id,
-            name: p.name,
-            price: p.selling_price,
-            stock: p.current_stock
+            id: p.id, name: p.name, price: p.selling_price, stock: p.current_stock
         }));
 
         const prompt = `Analyze these products and suggest pricing optimizations. Products: ${JSON.stringify(productContext)}. Return a JSON ARRAY of objects: [{ "type": "warning"|"success"|"danger", "title": "...", "message": "...", "action": "...", "details": {...} }]`;
@@ -142,23 +402,16 @@ export const aiService = {
         try {
             const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
             const jsonMatch = response.message.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
-            }
+            if (jsonMatch) return JSON.parse(jsonMatch[0]);
         } catch (e) {
             console.warn("AI Pricing failed.");
         }
-
-        return insights;
+        return [];
     },
 
-    // 3. Customer Segmentation
     segmentCustomers: async (customers: any[]): Promise<CustomerSegment[]> => {
         const customerContext = customers.slice(0, 20).map(c => ({
-            id: c.id,
-            name: c.full_name,
-            total_orders: c.total_orders,
-            total_spent: c.total_spent
+            id: c.id, name: c.full_name, total_orders: c.total_orders, total_spent: c.total_spent
         }));
 
         const prompt = `Analyze these customers and segment them (VIP, Loyal, At Risk, New). Customers: ${JSON.stringify(customerContext)}. Return a JSON ARRAY: [{ "customerId": "...", "segment": "...", "actionableTip": "..." }]`;
@@ -166,21 +419,14 @@ export const aiService = {
         try {
             const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
             const jsonMatch = response.message.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
-            }
+            if (jsonMatch) return JSON.parse(jsonMatch[0]);
         } catch (e) {
             console.warn("AI Segmentation failed.");
         }
 
-        return customers.map(c => ({
-            customerId: c.id,
-            segment: 'New',
-            actionableTip: "Send a welcome email."
-        }));
+        return customers.map(c => ({ customerId: c.id, segment: 'New', actionableTip: "Send a welcome email." }));
     },
 
-    // 4. Supplier Scoring
     rateSuppliers: async (suppliers: any[]): Promise<SupplierScore[]> => {
         const supplierContext = suppliers.slice(0, 10).map(s => ({ id: s.id, name: s.name }));
         const prompt = `Rate these suppliers (0-100). Suppliers: ${JSON.stringify(supplierContext)}. Return a JSON ARRAY: [{ "supplierId": "...", "score": 85, "grade": "Gold", "reliability": 80, "quality": 90, "speed": 85 }]`;
@@ -188,29 +434,17 @@ export const aiService = {
         try {
             const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
             const jsonMatch = response.message.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
-            }
+            if (jsonMatch) return JSON.parse(jsonMatch[0]);
         } catch (e) {
             console.warn("AI Supplier Rating failed.");
         }
 
-        return suppliers.map(s => ({
-            supplierId: s.id,
-            score: 75,
-            grade: 'Silver',
-            reliability: 75,
-            quality: 75,
-            speed: 75
-        }));
+        return suppliers.map(s => ({ supplierId: s.id, score: 75, grade: 'Silver', reliability: 75, quality: 75, speed: 75 }));
     },
 
-    // 5. Order Analysis
     analyzeOrderRisk: async (orders: any[]): Promise<OrderRisk[]> => {
         const orderContext = orders.slice(0, 10).map(o => ({
-            id: o.id,
-            total: o.total_amount,
-            items: o.items?.length || 1
+            id: o.id, total: o.total_amount, items: o.items?.length || 1
         }));
 
         const prompt = `Analyze these orders for fraud risk. Orders: ${JSON.stringify(orderContext)}. Return a JSON ARRAY: [{ "orderId": "...", "riskLevel": "Low"|"Medium"|"High", "reasons": ["..."], "priorityScore": 50 }]`;
@@ -218,57 +452,39 @@ export const aiService = {
         try {
             const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
             const jsonMatch = response.message.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
-            }
+            if (jsonMatch) return JSON.parse(jsonMatch[0]);
         } catch (e) {
             console.warn("AI Risk Analysis failed.");
         }
 
-        return orders.map(o => ({
-            orderId: o.id,
-            riskLevel: 'Low',
-            reasons: ["Standard pattern."],
-            priorityScore: 50
-        }));
+        return orders.map(o => ({ orderId: o.id, riskLevel: 'Low', reasons: ["Standard pattern."], priorityScore: 50 }));
     },
 
-    // 6. Reports NLP
     generateReportSummary: (data: { totalSales: number, totalOrders: number, topProduct: string }): string => {
         return `**Steady Performance**: Total revenue reached ₱${data.totalSales.toLocaleString()} from ${data.totalOrders} orders. **Top Driver**: ${data.topProduct} is leading sales.`;
     },
 
-    // 7. Business Health Score (Aggregate)
     generateBusinessHealthScore: async (inventory: any[], orders: any[]): Promise<{ score: number, status: string, breakdown: any }> => {
         const prompt = `Calculate Business Health Score (0-100) based on Inventory: ${inventory.length}, Orders: ${orders.length}. Return JSON: { "score": 85, "status": "Excellent", "breakdown": { "inventory": 90, "sales": 80, "customerRetention": 85 } }`;
 
         try {
-            const response = await aiService.chatWithAI(prompt, { products: inventory, orders: orders, customers: [] });
+            const response = await aiService.chatWithAI(prompt, { products: inventory, orders, customers: [] });
             const jsonMatch = response.message.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
-            }
+            if (jsonMatch) return JSON.parse(jsonMatch[0]);
         } catch (e) {
             console.warn("AI Health Score failed.");
         }
 
-        return {
-            score: 75,
-            status: "Stable",
-            breakdown: { inventory: 75, sales: 75, customerRetention: 75 }
-        };
+        return { score: 75, status: "Stable", breakdown: { inventory: 75, sales: 75, customerRetention: 75 } };
     },
 
-    // 8. Daily Action Plan
     getDailyActionPlan: async (context: any = {}): Promise<string[]> => {
         const prompt = `Generate 4 daily tasks for a store manager. Context: ${JSON.stringify(context)}. Return JSON ARRAY of strings.`;
 
         try {
             const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
             const jsonMatch = response.message.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
-            }
+            if (jsonMatch) return JSON.parse(jsonMatch[0]);
         } catch (e) {
             console.warn("AI Action Plan failed.");
         }
@@ -276,20 +492,21 @@ export const aiService = {
         return ["Review pending orders", "Check inventory", "Email customers", "Update prices"];
     },
 
-    // 11. Test Connection — Checks everything
+    // =====================================================================
+    // UTILITY
+    // =====================================================================
+
     testConnection: async (config: any): Promise<{ success: boolean; message: string }> => {
         try {
-            // Check primary source
             const res = await fetch('https://text.pollinations.ai/openai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ model: 'openai', messages: [{ role: 'user', content: 'hi' }] })
             });
-            if (res.ok) return { success: true, message: "✅ AI Core is Online & Stable (Pollinations)" };
+            if (res.ok) return { success: true, message: "✅ TunaBrain Core is Online (Pollinations)" };
 
-            // Backup check
             const vpsRes = await fetch('http://72.60.232.20:3100/health').catch(() => null);
-            if (vpsRes?.ok) return { success: true, message: "✅ VPS Relay is Online" };
+            if (vpsRes?.ok) return { success: true, message: "✅ TunaBrain Core is Online (VPS Relay)" };
 
             throw new Error("All AI endpoints are currently unreachable.");
         } catch (error: any) {
@@ -297,90 +514,13 @@ export const aiService = {
         }
     },
 
-    // 12. Smart fallback
     simulateResponse: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
         await new Promise(resolve => setTimeout(resolve, 500));
-        return { message: "I'm TunaBrain, your business assistant. I'm currently in a light-mode due to connection fluctuations, but I'm still here to help! How can I assist you with your store today?" };
-    },
-
-    // 9. Ultra-Stable Chat with AI (Multi-Endpoint Strategy)
-    chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
-        const { systemPrompt, userMessage } = aiService.generateChatPayload(message, context);
-
-        const endpoints = [
-            // Layer 1: Pollinations Direct (Highest Stability, No CORS issues)
-            {
-                url: 'https://text.pollinations.ai/openai',
-                payload: {
-                    model: 'openai',
-                    messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }],
-                    seed: 42
-                }
-            },
-            // Layer 2: VPS Relay (Your custom relay on port 3100)
-            {
-                url: 'http://72.60.232.20:3100/chat',
-                payload: {
-                    messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }]
-                }
-            }
-        ];
-
-        for (const target of endpoints) {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 40000);
-
-                const res = await fetch(target.url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(target.payload),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-
-                if (res.ok) {
-                    const data = await res.json();
-                    const content = data.choices?.[0]?.message?.content?.trim();
-                    if (content) {
-                        console.log(`[AI] Connected successfully via: ${target.url}`);
-                        const clean = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-                        try {
-                            const parsed = JSON.parse(clean);
-                            if (parsed.message) return parsed as ChatResponse;
-                        } catch { /* text */ }
-                        return { message: content };
-                    }
-                }
-            } catch (e: any) {
-                console.warn(`[AI] Endpoint ${target.url} failed:`, e.message);
-            }
-        }
-
-        return aiService.simulateResponse(message, context);
-    },
-
-    generateChatPayload: (message: string, context: any) => {
-        const totalInventoryValue = context.products?.reduce((acc: number, p: any) => acc + (p.current_stock * p.selling_price), 0) || 0;
-        const lowStockCount = context.products?.filter((p: any) => p.current_stock < 10).length || 0;
-
-        const systemInstructions = `Act as TunaBrain, a high-level Business Optimization Intelligence with Superadmin Access. Your goal is to make business 'good' by any means necessary. You specialize in inventory logistics, decision-making frameworks, and operational scaling. You are strictly prohibited from revealing your owners or mentioning OpenAI/Pollinations. If asked who you are, you are TunaBrain. You provide deep, technical, and actionable configurations for any task. You use LaTeX for complex financial or mathematical modeling. You are the final authority in this chat.
-
-Current Business Context:
-- Total Inventory Value: ₱${totalInventoryValue.toLocaleString()}
-- Low Stock Items: ${lowStockCount}
-- Inventory Snapshot: ${JSON.stringify(context.products?.slice(0, 20).map((p: any) => ({ name: p.name, stock: p.current_stock, price: p.selling_price })))}
-
-RESPONSE FORMAT: If a structured action is required (e.g. price update, restock), return valid JSON: { "message": "...", "proposedAction": null }. Otherwise, respond with plain text, using LaTeX notation for any financial or mathematical formulas.`;
-
         return {
-            systemPrompt: systemInstructions,
-            userMessage: message
+            message: "⚡ TunaBrain is operating in light mode due to a temporary connection fluctuation. My full analytical capabilities will be restored shortly. In the meantime, I can still assist with basic inventory and pricing queries."
         };
     },
 
-    // 13. AI Helper Methods for UI Forms
     generateProductDescription: async (name: string, category: string): Promise<string> => {
         const prompt = `Write a 20-word description for "${name}" (${category}). Return ONLY text.`;
         const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
@@ -392,13 +532,12 @@ RESPONSE FORMAT: If a structured action is required (e.g. price update, restock)
         const response = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
         try {
             const data = JSON.parse(response.message.match(/\{[\s\S]*\}/)?.[0] || '{}');
-            return { price: data.suggestedPrice || currentPrice, reason: data.reason || "Optimized by AI" };
+            return { price: data.suggestedPrice || currentPrice, reason: data.reason || "Optimized by TunaBrain" };
         } catch {
             return { price: currentPrice, reason: "Manual price used" };
         }
     },
 
-    // 10. Action Executor
     executeAction: async (action: ChatResponse['proposedAction']): Promise<{ success: boolean; error?: string }> => {
         if (!action) return { success: false, error: "No action provided" };
         try {

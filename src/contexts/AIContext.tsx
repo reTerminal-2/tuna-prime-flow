@@ -7,6 +7,9 @@ import { useNavigate } from 'react-router-dom';
 
 const AIContext = createContext<AIContextType | undefined>(undefined);
 
+// Message pair tracker for feedback context (question -> answer linkage)
+const messagePairRef: { [messageId: string]: { question: string; answer: string } } = {};
+
 export const AIProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -22,7 +25,7 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
   const [healthScore, setHealthScore] = useState<any>(null);
   const [actionPlan, setActionPlan] = useState<string[]>([]);
   const [contextData, setContextData] = useState<{ products: any[], orders: any[], customers: any[] }>({ products: [], orders: [], customers: [] });
-  
+
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -37,24 +40,24 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
         fetchChatSessions();
       }
     };
-    
+
     checkUserAndFetch();
 
     // Subscribe to auth changes to clear/reload data
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-            fetchDashboardData();
-            fetchChatSessions();
-        } else if (event === 'SIGNED_OUT') {
-            setMessages([{
-                id: 'init',
-                role: 'assistant',
-                content: "Hello! I'm TunaBrain, your AI store manager. I've analyzed your latest data. How can I help you optimize your business today?",
-                timestamp: new Date()
-            }]);
-            setChatSessions([]);
-            setCurrentSessionId(null);
-        }
+      if (event === 'SIGNED_IN' && session) {
+        fetchDashboardData();
+        fetchChatSessions();
+      } else if (event === 'SIGNED_OUT') {
+        setMessages([{
+          id: 'init',
+          role: 'assistant',
+          content: "Hello! I'm TunaBrain, your AI store manager. I've analyzed your latest data. How can I help you optimize your business today?",
+          timestamp: new Date()
+        }]);
+        setChatSessions([]);
+        setCurrentSessionId(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -67,9 +70,9 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
       setChatSessions(prev => {
         if (!prev.find(s => s.id === currentSessionId)) {
           return [{
-             id: currentSessionId,
-             created_at: new Date().toISOString(),
-             last_message: "New Chat"
+            id: currentSessionId,
+            created_at: new Date().toISOString(),
+            last_message: "New Chat"
           }, ...prev];
         }
         return prev;
@@ -77,8 +80,8 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
 
       fetchChatHistory(currentSessionId);
     } else {
-        // Only initialize if we have chat sessions loaded or if we are sure we should
-        // We defer this slightly to avoid creating sessions on login screen
+      // Only initialize if we have chat sessions loaded or if we are sure we should
+      // We defer this slightly to avoid creating sessions on login screen
     }
   }, [currentSessionId]);
 
@@ -93,7 +96,7 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
         const health = await aiService.generateBusinessHealthScore(products, orders);
         setHealthScore(health);
       }
-      
+
       const plan = await aiService.getDailyActionPlan({ products: products || [], orders: orders || [] });
       setActionPlan(plan);
     } catch (error) {
@@ -103,155 +106,155 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchChatSessions = async () => {
     try {
-        const { data: sessions, error } = await supabase
-            .from('chat_history')
-            .select('session_id, created_at, content')
-            .order('created_at', { ascending: false });
+      const { data: sessions, error } = await supabase
+        .from('chat_history')
+        .select('session_id, created_at, content')
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        const uniqueSessions = new Map();
-        sessions?.forEach(msg => {
-            if (!uniqueSessions.has(msg.session_id)) {
-                uniqueSessions.set(msg.session_id, {
-                    id: msg.session_id,
-                    created_at: msg.created_at,
-                    last_message: msg.content
-                });
-            }
-        });
-        
-        const sessionsList = Array.from(uniqueSessions.values()) as ChatSession[];
-        
-        // If we have no sessions in DB and no current session, create one immediately
-        if (sessionsList.length === 0 && !currentSessionId) {
-             const newId = crypto.randomUUID();
-             const newSession: ChatSession = {
-                 id: newId,
-                 created_at: new Date().toISOString(),
-                 last_message: "New Chat"
-             };
-             
-             setChatSessions([newSession]);
-             setCurrentSessionId(newId);
-             setMessages([{
-                id: 'init',
-                role: 'assistant',
-                content: "Hello! I'm TunaBrain, your AI store manager. How can I help you today?",
-                timestamp: new Date()
-            }]);
-             return;
+      const uniqueSessions = new Map();
+      sessions?.forEach(msg => {
+        if (!uniqueSessions.has(msg.session_id)) {
+          uniqueSessions.set(msg.session_id, {
+            id: msg.session_id,
+            created_at: msg.created_at,
+            last_message: msg.content
+          });
         }
+      });
 
-        // Ensure current optimistic session is preserved if not in DB yet
-        setChatSessions(prev => {
-             // Find if we have a current session that is optimistic (not in DB list yet)
-             if (currentSessionId) {
-                 const currentOptimistic = prev.find(s => s.id === currentSessionId);
-                 // If the current session is NOT in the fetched list, keep it at the top
-                 if (currentOptimistic && !uniqueSessions.has(currentSessionId)) {
-                     return [currentOptimistic, ...sessionsList];
-                 }
-             }
-             return sessionsList;
-        });
-        
-        // If we have sessions and no current session, select the most recent one
-        if (sessionsList.length > 0 && !currentSessionId) {
-            setCurrentSessionId(sessionsList[0].id);
+      const sessionsList = Array.from(uniqueSessions.values()) as ChatSession[];
+
+      // If we have no sessions in DB and no current session, create one immediately
+      if (sessionsList.length === 0 && !currentSessionId) {
+        const newId = crypto.randomUUID();
+        const newSession: ChatSession = {
+          id: newId,
+          created_at: new Date().toISOString(),
+          last_message: "New Chat"
+        };
+
+        setChatSessions([newSession]);
+        setCurrentSessionId(newId);
+        setMessages([{
+          id: 'init',
+          role: 'assistant',
+          content: "Hello! I'm TunaBrain, your AI store manager. How can I help you today?",
+          timestamp: new Date()
+        }]);
+        return;
+      }
+
+      // Ensure current optimistic session is preserved if not in DB yet
+      setChatSessions(prev => {
+        // Find if we have a current session that is optimistic (not in DB list yet)
+        if (currentSessionId) {
+          const currentOptimistic = prev.find(s => s.id === currentSessionId);
+          // If the current session is NOT in the fetched list, keep it at the top
+          if (currentOptimistic && !uniqueSessions.has(currentSessionId)) {
+            return [currentOptimistic, ...sessionsList];
+          }
         }
+        return sessionsList;
+      });
+
+      // If we have sessions and no current session, select the most recent one
+      if (sessionsList.length > 0 && !currentSessionId) {
+        setCurrentSessionId(sessionsList[0].id);
+      }
 
     } catch (error) {
-        console.error("Error fetching chat sessions:", error);
+      console.error("Error fetching chat sessions:", error);
     }
   };
 
   const createNewSession = () => {
     const newId = crypto.randomUUID();
     const newSession: ChatSession = {
-        id: newId,
-        created_at: new Date().toISOString(),
-        last_message: "New Chat"
+      id: newId,
+      created_at: new Date().toISOString(),
+      last_message: "New Chat"
     };
 
     // 1. Add to sessions list immediately (Optimistic UI)
     setChatSessions(prev => [newSession, ...prev]);
-    
+
     // 2. Set as active
     setCurrentSessionId(newId);
 
     // 3. Reset chat window
     setMessages([{
-        id: 'init',
-        role: 'assistant',
-        content: "Hello! I'm TunaBrain, your AI store manager. How can I help you today?",
-        timestamp: new Date()
+      id: 'init',
+      role: 'assistant',
+      content: "Hello! I'm TunaBrain, your AI store manager. How can I help you today?",
+      timestamp: new Date()
     }]);
   };
 
   const fetchChatHistory = async (sessionId: string) => {
     setIsLoadingHistory(true);
     try {
-        const { data, error } = await supabase
-            .from('chat_history')
-            .select('*')
-            .eq('session_id', sessionId)
-            .order('timestamp', { ascending: true });
+      const { data, error } = await supabase
+        .from('chat_history')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('timestamp', { ascending: true });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        if (data && data.length > 0) {
-            const formattedMessages: ChatMessage[] = data.map(msg => ({
-                id: msg.id,
-                role: msg.role as 'user' | 'assistant',
-                content: msg.content,
-                timestamp: new Date(msg.timestamp),
-                action: msg.action,
-                actionStatus: msg.action_status as any
-            }));
-            setMessages(formattedMessages);
-        } else {
-             if (messages.length === 0 || messages[0].id !== 'init') {
-                 setMessages([{
-                    id: 'init',
-                    role: 'assistant',
-                    content: "Hello! I'm TunaBrain, your AI store manager. How can I help you today?",
-                    timestamp: new Date()
-                }]);
-             }
+      if (data && data.length > 0) {
+        const formattedMessages: ChatMessage[] = data.map(msg => ({
+          id: msg.id,
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+          action: msg.action,
+          actionStatus: msg.action_status as any
+        }));
+        setMessages(formattedMessages);
+      } else {
+        if (messages.length === 0 || messages[0].id !== 'init') {
+          setMessages([{
+            id: 'init',
+            role: 'assistant',
+            content: "Hello! I'm TunaBrain, your AI store manager. How can I help you today?",
+            timestamp: new Date()
+          }]);
         }
+      }
     } catch (error) {
-        console.error("Error loading chat history:", error);
+      console.error("Error loading chat history:", error);
     } finally {
-        setIsLoadingHistory(false);
+      setIsLoadingHistory(false);
     }
   };
 
   const saveMessageToHistory = async (msg: ChatMessage, sessionId: string) => {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-        await supabase.from('chat_history').insert({
-            id: msg.id,
-            user_id: user.id,
-            role: msg.role,
-            content: msg.content,
-            timestamp: msg.timestamp.toISOString(),
-            action: msg.action || null,
-            action_status: msg.actionStatus || null,
-            session_id: sessionId
-        });
-        
-        if (messages.length <= 2) fetchChatSessions();
+      await supabase.from('chat_history').insert({
+        id: msg.id,
+        user_id: user.id,
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp.toISOString(),
+        action: msg.action || null,
+        action_status: msg.actionStatus || null,
+        session_id: sessionId
+      });
+
+      if (messages.length <= 2) fetchChatSessions();
     } catch (error) {
-        console.error("Error saving message:", error);
+      console.error("Error saving message:", error);
     }
   };
 
   const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
-    
+
     const updatedSessions = chatSessions.filter(s => s.id !== sessionId);
     setChatSessions(updatedSessions);
 
@@ -264,31 +267,31 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-        const { error } = await supabase
-            .from('chat_history')
-            .delete()
-            .eq('session_id', sessionId);
-        
-        if (error) {
-            console.error("Error deleting session:", error);
-            toast.error("Could not delete conversation");
-        } else {
-            toast.success("Conversation deleted");
-        }
+      const { error } = await supabase
+        .from('chat_history')
+        .delete()
+        .eq('session_id', sessionId);
+
+      if (error) {
+        console.error("Error deleting session:", error);
+        toast.error("Could not delete conversation");
+      } else {
+        toast.success("Conversation deleted");
+      }
     } catch (err) {
-        console.error(err);
+      console.error(err);
     }
   };
 
   const handleAction = async (messageId: string, action: ChatResponse['proposedAction'], approved: boolean) => {
     if (!approved) {
-      setMessages(prev => prev.map(msg => 
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, actionStatus: 'rejected' } : msg
       ));
       return;
     }
 
-    setMessages(prev => prev.map(msg => 
+    setMessages(prev => prev.map(msg =>
       msg.id === messageId ? { ...msg, actionStatus: 'completed' } : msg
     ));
 
@@ -296,7 +299,7 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
     if (result.success) {
       toast.success("Action executed successfully!");
       fetchDashboardData();
-      
+
       const confirmMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -320,20 +323,19 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
       timestamp: new Date()
     };
 
+    const userQuestion = input;
     setMessages(prev => [...prev, userMsg]);
     setInput("");
     setIsTyping(true);
-    
+
     if (currentSessionId) saveMessageToHistory(userMsg, currentSessionId);
 
     try {
-      // We don't await this if we want it to be truly background? 
-      // Actually, we want to update state when it finishes.
-      // Since this is in Context, it will continue even if user changes route.
       const response = await aiService.chatWithAI(userMsg.content, contextData);
-      
+
+      const aiMsgId = crypto.randomUUID();
       const aiMsg: ChatMessage = {
-        id: crypto.randomUUID(),
+        id: aiMsgId,
         role: 'assistant',
         content: response.message,
         timestamp: new Date(),
@@ -341,14 +343,23 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
         actionStatus: response.proposedAction ? 'pending' : undefined
       };
 
+      // Track Q->A pair for feedback context
+      messagePairRef[aiMsgId] = { question: userQuestion, answer: response.message };
+
       setMessages(prev => [...prev, aiMsg]);
-      
+
       if (currentSessionId) saveMessageToHistory(aiMsg, currentSessionId);
     } catch (error) {
       toast.error("AI is temporarily unavailable. Please try again.");
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const submitFeedback = async (messageId: string, vote: 1 | -1) => {
+    const pair = messagePairRef[messageId];
+    if (!pair) return;
+    await aiService.submitFeedback(messageId, vote, pair.question, pair.answer);
   };
 
   return (
@@ -367,7 +378,8 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
       isLoadingHistory,
       healthScore,
       actionPlan,
-      handleAction
+      handleAction,
+      submitFeedback
     }}>
       {children}
     </AIContext.Provider>

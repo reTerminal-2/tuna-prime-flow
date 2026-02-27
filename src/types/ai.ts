@@ -31,4 +31,5 @@ export interface AIContextType {
   healthScore: any;
   actionPlan: string[];
   handleAction: (messageId: string, action: ChatResponse['proposedAction'], approved: boolean) => Promise<void>;
+  submitFeedback: (messageId: string, vote: 1 | -1) => Promise<void>;
 }

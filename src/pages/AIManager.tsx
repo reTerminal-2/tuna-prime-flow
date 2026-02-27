@@ -20,7 +20,9 @@ import {
   Settings,
   MessageSquare,
   PlusCircle,
-  X
+  X,
+  ThumbsUp,
+  ThumbsDown
 } from "lucide-react";
 import { useAI } from "@/contexts/AIContext";
 
@@ -45,11 +47,13 @@ const AIManager = () => {
     isLoadingHistory,
     healthScore,
     actionPlan,
-    handleAction
+    handleAction,
+    submitFeedback
   } = useAI();
 
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [productFormData, setProductFormData] = useState<any>(undefined);
+  const [feedbackState, setFeedbackState] = useState<Record<string, 1 | -1>>({});
 
   // Intercept handleAction to check for OPEN_PRODUCT_FORM
   const onHandleAction = async (messageId: string, action: any, approved: boolean) => {
@@ -274,6 +278,43 @@ const AIManager = () => {
                           : 'bg-muted border border-border'
                           }`}>
                           <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+
+                          {/* Feedback Buttons for AI messages */}
+                          {msg.role === 'assistant' && msg.id !== 'init' && (
+                            <div className="flex items-center gap-1 mt-2 pt-1.5 border-t border-border/40">
+                              <span className="text-[9px] text-muted-foreground mr-1">Helpful?</span>
+                              <button
+                                onClick={() => {
+                                  if (feedbackState[msg.id]) return;
+                                  setFeedbackState(prev => ({ ...prev, [msg.id]: 1 }));
+                                  submitFeedback(msg.id, 1);
+                                }}
+                                disabled={!!feedbackState[msg.id]}
+                                className={`p-1 rounded transition-colors ${feedbackState[msg.id] === 1
+                                    ? 'text-green-500 bg-green-500/10'
+                                    : 'text-muted-foreground hover:text-green-500 hover:bg-green-500/10'
+                                  } disabled:cursor-not-allowed`}
+                                title="Helpful"
+                              >
+                                <ThumbsUp className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (feedbackState[msg.id]) return;
+                                  setFeedbackState(prev => ({ ...prev, [msg.id]: -1 }));
+                                  submitFeedback(msg.id, -1);
+                                }}
+                                disabled={!!feedbackState[msg.id]}
+                                className={`p-1 rounded transition-colors ${feedbackState[msg.id] === -1
+                                    ? 'text-red-500 bg-red-500/10'
+                                    : 'text-muted-foreground hover:text-red-500 hover:bg-red-500/10'
+                                  } disabled:cursor-not-allowed`}
+                                title="Not helpful"
+                              >
+                                <ThumbsDown className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
 
                           {/* Missing API Key Action */}
                           {msg.content.includes("Missing Gemini API Key") && msg.role === 'assistant' && (
