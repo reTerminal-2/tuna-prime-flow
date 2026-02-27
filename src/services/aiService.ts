@@ -54,16 +54,23 @@ export interface LearnedPattern {
 
 // --- Off-Topic Detection ---
 const BUSINESS_KEYWORDS = [
+    // Action verbs — critical for commands like "add product", "create supplier"
+    'add', 'create', 'new', 'update', 'edit', 'delete', 'remove', 'list', 'show', 'view',
+    'get', 'find', 'check', 'set', 'open', 'give', 'tell', 'calculate', 'generate', 'make',
+    // Domain nouns
     'inventory', 'stock', 'price', 'pricing', 'product', 'supplier', 'order', 'supply', 'demand',
     'revenue', 'profit', 'sales', 'cost', 'margin', 'customer', 'analytics', 'report', 'forecast',
-    'restock', 'expiry', 'expiration', 'shrinkage', 'logistics', 'warehouse', 'SKU', 'perishable',
+    'restock', 'expiry', 'expiration', 'shrinkage', 'logistics', 'warehouse', 'sku', 'perishable',
     'tuna', 'seafood', 'fish', 'optimization', 'business', 'store', 'transaction', 'discount',
     'strategy', 'kpi', 'metric', 'performance', 'data', 'analysis', 'financial', 'budget',
     'cash flow', 'expense', 'roi', 'growth', 'trend', 'category', 'segment', 'risk', 'health',
     'alert', 'low stock', 'overstock', 'dead stock', 'markdown', 'bulk', 'wholesale', 'retail',
     'suggest', 'recommend', 'optimize', 'improve', 'automate', 'scale', 'manage', 'track',
-    'help', 'how', 'what', 'why', 'when', 'which', 'can you', 'should i', 'show me'
+    // Natural question words — allow general questions so users can ask anything business-related
+    'help', 'how', 'what', 'why', 'when', 'which', 'who', 'where', 'can you', 'should i',
+    'show me', 'i need', 'i want', 'let me', 'please', 'could you', 'can i', 'would you'
 ];
+
 
 function isBusinessRelated(message: string): boolean {
     const lower = message.toLowerCase();
