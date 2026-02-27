@@ -447,11 +447,11 @@ export default function POS() {
                 </ScrollArea>
 
                 {/* Floating Action Buttons */}
-                <div className="absolute top-20 right-4 flex flex-col gap-3 z-20 md:hidden">
-                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-700 border-2 border-white/20" onClick={() => setIsCalculatorOpen(true)}>
+                <div className="fixed bottom-24 left-6 flex gap-3 z-20 md:hidden">
+                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-700 border-2 border-white/20 active:scale-90 transition-transform" onClick={() => setIsCalculatorOpen(true)}>
                         <Calculator className="h-6 w-6 text-white" />
                     </Button>
-                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700 border-2 border-white/20" onClick={() => setIsAIChatOpen(true)}>
+                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700 border-2 border-white/20 active:scale-90 transition-transform" onClick={() => setIsAIChatOpen(true)}>
                         <Sparkles className="h-6 w-6 text-white" />
                     </Button>
                 </div>
