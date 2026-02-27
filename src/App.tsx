@@ -59,18 +59,18 @@ const DeviceRedirector = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Only redirect if explicitly on a seller or dashboard path to avoid breaking everything
     const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isMobilePath = location.pathname.startsWith('/mobile');
+    const isSellerPath = location.pathname.includes('/seller');
+    const isDashboardPath = location.pathname === '/dashboard';
 
+    // Logic: Mobile users should be on /mobile version of the current page
     if (isMobileDevice && !isMobilePath) {
-      // Redirect mobile users to /mobile/...
       const newPath = `/mobile${location.pathname === '/' ? '' : location.pathname}`;
       navigate(newPath, { replace: true });
-    } else if (!isMobileDevice && isMobilePath) {
-      // Redirect desktop users away from /mobile/...
-      const newPath = location.pathname.replace('/mobile', '') || '/';
-      navigate(newPath, { replace: true });
     }
+    // Note: Removed the "away" redirect for desktop to allow testing/manual access to /mobile
   }, [location.pathname, navigate]);
 
   return <>{children}</>;
@@ -87,7 +87,7 @@ const App = () => (
             <Suspense fallback={<PageLoader />}>
               <DeviceRedirector>
                 <Routes>
-                  {/* Storefront Routes */}
+                  {/* Shared/Common Routes (Responsive) */}
                   <Route path="/" element={<StoreLayout />}>
                     <Route index element={<Index />} />
                     <Route path="product/:id" element={<ProductDetail />} />
@@ -97,15 +97,12 @@ const App = () => (
                     <Route path="profile" element={<UserProfile />} />
                   </Route>
 
-                  {/* Auth Route */}
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/update-password" element={<UpdatePassword />} />
-
-                  {/* Super Admin Routes */}
                   <Route path="/superadmin" element={<SuperAdminLogin />} />
                   <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
 
-                  {/* Seller Routes (Desktop) */}
+                  {/* Desktop Specific Seller Routes */}
                   <Route path="/seller" element={<Navigate to="/seller/dashboard" replace />} />
                   <Route path="/seller/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
                   <Route path="/seller/pos" element={<MainLayout><POS /></MainLayout>} />
@@ -121,8 +118,11 @@ const App = () => (
                   <Route path="/seller/shipping" element={<MainLayout><ShippingSettings /></MainLayout>} />
                   <Route path="/seller/payments" element={<MainLayout><PaymentSettings /></MainLayout>} />
 
-                  {/* Mobile Specific Routes */}
+                  {/* Mobile Specific Prefix Routes */}
                   <Route path="/mobile" element={<Navigate to="/mobile/seller/dashboard" replace />} />
+
+                  {/* Mobile Version of Shared Routes */}
+                  <Route path="/mobile/auth" element={<Auth />} />
                   <Route path="/mobile/seller/dashboard" element={<MobileLayout><Dashboard /></MobileLayout>} />
                   <Route path="/mobile/seller/pos" element={<MobileLayout><POS /></MobileLayout>} />
                   <Route path="/mobile/seller/ai" element={<MobileLayout><AIManager /></MobileLayout>} />
