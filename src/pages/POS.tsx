@@ -324,8 +324,8 @@ export default function POS() {
             {/* LEFT SIDE: PRODUCT CATALOG */}
             <div className="flex-1 flex flex-col gap-4 overflow-hidden pb-16 md:pb-0">
                 {/* Top Bar: Search & Customer */}
-                <div className="flex flex-col sm:flex-row gap-3 justify-between bg-card p-2 md:p-3 rounded-xl border shadow-sm">
-                    <div className="flex gap-2 flex-1">
+                <div className="flex flex-col sm:flex-row gap-2 justify-between bg-card p-2 rounded-xl border shadow-sm">
+                    <div className="flex gap-2 w-full">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
@@ -336,52 +336,53 @@ export default function POS() {
                                 autoFocus
                             />
                         </div>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="w-10 md:w-[200px] p-0 md:px-4 md:py-2 justify-center md:justify-between shrink-0">
-                                    <div className="flex items-center gap-2">
-                                        <Users className="h-4 w-4" />
-                                        <span className="hidden md:inline truncate max-w-[120px]">
-                                            {selectedCustomer ? selectedCustomer.full_name : "Walk-in Customer"}
-                                        </span>
-                                    </div>
-                                    <MoreVertical className="h-3 w-3 md:hidden" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[280px] p-0" align="end">
-                                <div className="p-2 border-b"><Input placeholder="Search customers..." className="h-8" /></div>
-                                <ScrollArea className="h-[200px]">
-                                    <div className="p-1">
-                                        <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => setSelectedCustomer(null)}>Walk-in Customer</Button>
-                                        {customers.map(c => (
-                                            <Button key={c.id} variant="ghost" className="w-full justify-start text-sm" onClick={() => setSelectedCustomer(c)}>
-                                                {c.full_name}
-                                            </Button>
-                                        ))}
-                                    </div>
-                                </ScrollArea>
-                            </PopoverContent>
-                        </Popover>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="icon">
-                                    <MoreVertical className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>System</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => setIsShiftDialogOpen(true)}>
-                                    <Clock className="mr-2 h-4 w-4" /> Shift Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => window.location.reload()}>
-                                    <Settings className="mr-2 h-4 w-4" /> Refresh POS
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive" onClick={handleCloseShift}>
-                                    <LogOut className="mr-2 h-4 w-4" /> Close Register
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex gap-1">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className="w-10 sm:w-[200px] p-0 sm:px-4 sm:py-2 justify-center sm:justify-between shrink-0 h-10">
+                                        <div className="flex items-center gap-2">
+                                            <Users className="h-4 w-4" />
+                                            <span className="hidden sm:inline truncate max-w-[120px]">
+                                                {selectedCustomer ? selectedCustomer.full_name : "Walk-in"}
+                                            </span>
+                                        </div>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[280px] p-0" align="end">
+                                    <div className="p-2 border-b"><Input placeholder="Search customers..." className="h-8" /></div>
+                                    <ScrollArea className="h-[200px]">
+                                        <div className="p-1">
+                                            <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => setSelectedCustomer(null)}>Walk-in Customer</Button>
+                                            {customers.map(c => (
+                                                <Button key={c.id} variant="ghost" className="w-full justify-start text-sm" onClick={() => setSelectedCustomer(c)}>
+                                                    {c.full_name}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                </PopoverContent>
+                            </Popover>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="icon" className="h-10 w-10">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>System</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => setIsShiftDialogOpen(true)}>
+                                        <Clock className="mr-2 h-4 w-4" /> Shift Details
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => window.location.reload()}>
+                                        <Settings className="mr-2 h-4 w-4" /> Refresh POS
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive" onClick={handleCloseShift}>
+                                        <LogOut className="mr-2 h-4 w-4" /> Close Register
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                 </div>
 
@@ -407,32 +408,37 @@ export default function POS() {
                         {filteredProducts.map(product => (
                             <Card
                                 key={product.id}
-                                className="group cursor-pointer hover:border-primary transition-all active:scale-95 flex flex-col justify-between overflow-hidden relative shadow-sm hover:shadow-md"
+                                className="group cursor-pointer hover:border-primary transition-all active:scale-95 flex flex-col justify-between overflow-hidden relative shadow-sm hover:shadow-md h-full rounded-xl"
                                 onClick={() => addToCart(product)}
                             >
                                 <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                    <Button size="icon" variant="secondary" className="h-7 w-7 rounded-full shadow" onClick={(e) => {
+                                    <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full shadow-lg" onClick={(e) => {
                                         e.stopPropagation();
                                         addToCart(product, 6, "6-Pack");
                                     }} title="Add 6-Pack">
-                                        <Package className="h-3 w-3" />
+                                        <Package className="h-4 w-4" />
                                     </Button>
                                 </div>
 
-                                <div className="h-28 bg-muted/30 flex items-center justify-center text-muted-foreground relative">
-                                    <span className="text-3xl font-bold opacity-10 select-none">{(product.name || "?").substring(0, 2).toUpperCase()}</span>
+                                <div className="h-24 sm:h-28 bg-muted/40 flex items-center justify-center text-muted-foreground relative">
+                                    <span className="text-4xl font-black opacity-10 select-none">{(product.name || "?").substring(0, 2).toUpperCase()}</span>
                                     {(product.current_stock || 0) < 10 && (
-                                        <Badge variant="destructive" className="absolute bottom-2 left-2 text-[10px] h-5">Low Stock</Badge>
+                                        <Badge variant="destructive" className="absolute top-2 left-2 text-[10px] sm:text-xs h-5 px-1.5 animate-pulse border-white/20">LOW STOCK</Badge>
                                     )}
                                 </div>
-                                <CardContent className="p-3">
-                                    <h3 className="font-semibold text-sm line-clamp-2 h-10 leading-tight" title={product.name}>{product.name || "Unknown Product"}</h3>
-                                    <div className="flex justify-between items-end mt-2">
-                                        <div>
-                                            <div className="text-[10px] text-muted-foreground uppercase">{product.unit_of_measure || 'unit'}</div>
-                                            <span className="font-bold text-primary text-lg">₱{product.selling_price || 0}</span>
+                                <CardContent className="p-2 sm:p-3 flex flex-col justify-between flex-1">
+                                    <h3 className="font-bold text-xs sm:text-sm line-clamp-2 leading-tight mb-1" title={product.name}>{product.name || "Unknown Product"}</h3>
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex justify-between items-center bg-muted/30 px-2 py-0.5 rounded-md">
+                                            <span className="text-[10px] text-muted-foreground uppercase font-bold">{product.unit_of_measure || 'unit'}</span>
+                                            <span className="text-[10px] font-bold text-muted-foreground">{product.current_stock || 0}</span>
                                         </div>
-                                        <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">{product.current_stock || 0} left</div>
+                                        <div className="flex justify-between items-center mt-1">
+                                            <span className="font-black text-primary text-base sm:text-lg">₱{product.selling_price || 0}</span>
+                                            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
+                                                <Plus className="h-4 w-4" />
+                                            </div>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -441,7 +447,16 @@ export default function POS() {
                 </ScrollArea>
 
                 {/* Floating Action Buttons */}
-                <div className="absolute bottom-6 left-6 flex gap-2 z-20">
+                <div className="absolute top-20 right-4 flex flex-col gap-3 z-20 md:hidden">
+                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-700 border-2 border-white/20" onClick={() => setIsCalculatorOpen(true)}>
+                        <Calculator className="h-6 w-6 text-white" />
+                    </Button>
+                    <Button size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700 border-2 border-white/20" onClick={() => setIsAIChatOpen(true)}>
+                        <Sparkles className="h-6 w-6 text-white" />
+                    </Button>
+                </div>
+
+                <div className="hidden md:flex absolute bottom-6 left-6 gap-2 z-20">
                     <Button size="icon" className="h-12 w-12 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700" onClick={() => setIsCalculatorOpen(true)}>
                         <Calculator className="h-6 w-6 text-white" />
                     </Button>
@@ -834,40 +849,43 @@ export default function POS() {
 // Subcomponent: Cart List
 function CartList({ cart, updateQty, removeFromCart }: any) {
     return (
-        <div className="flex-1 overflow-auto p-2 space-y-2 bg-muted/10">
+        <div className="flex-1 overflow-auto p-3 space-y-3 bg-muted/10">
             {cart.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 space-y-2">
                     <ShoppingCart className="h-12 w-12" />
-                    <p>Cart is empty</p>
+                    <p className="font-medium">Your cart is empty</p>
                 </div>
             ) : (
                 cart.map((item: CartItem) => (
-                    <div key={`${item.id}-${item.isPack}`} className="flex gap-2 items-center bg-card p-2 rounded-lg border shadow-sm relative group">
-                        <div className="h-10 w-10 bg-muted rounded flex items-center justify-center font-bold text-xs text-muted-foreground shrink-0">
-                            {item.isPack ? <Package className="h-4 w-4 text-purple-600" /> : (item.name || "?").substring(0, 2)}
+                    <div key={`${item.id}-${item.isPack}`} className="flex gap-3 items-center bg-card p-3 rounded-xl border shadow-sm relative group animate-in slide-in-from-right-2 duration-200">
+                        <div className="h-12 w-12 bg-muted rounded-lg flex items-center justify-center font-black text-xs text-muted-foreground shrink-0 border shadow-inner">
+                            {item.isPack ? <Package className="h-5 w-5 text-purple-600" /> : (item.name || "?").substring(0, 2).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-sm truncate flex items-center gap-2">
+                            <h4 className="font-bold text-sm truncate flex items-center gap-2">
                                 {item.name || "Unknown"}
-                                {item.isPack && <Badge variant="secondary" className="text-[10px] h-4 px-1">{item.packName || 'Pack'}</Badge>}
+                                {item.isPack && <Badge variant="secondary" className="text-[10px] h-4 px-1 bg-purple-100 text-purple-700 border-none">{item.packName || 'Pack'}</Badge>}
                             </h4>
-                            <div className="text-xs text-muted-foreground">
-                                ₱{item.selling_price || 0} x {item.qty} {item.unit_of_measure || 'unit'}
+                            <div className="text-xs text-muted-foreground font-medium mt-0.5">
+                                ₱{item.selling_price || 0} / {item.unit_of_measure || 'unit'}
                             </div>
                         </div>
-                        <div className="font-bold text-sm">
-                            ₱{(item.selling_price * item.qty).toFixed(2)}
+                        <div className="flex items-center gap-3 shrink-0">
+                            <div className="flex items-center bg-muted/50 rounded-lg p-1 border">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-background shadow-sm" onClick={() => updateQty(item.id, -1, !!item.isPack)}>
+                                    <Minus className="h-4 w-4" />
+                                </Button>
+                                <span className="w-8 text-center font-black text-sm">{item.qty}</span>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-background shadow-sm" onClick={() => updateQty(item.id, 1, !!item.isPack)}>
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <div className="text-right min-w-[70px]">
+                                <div className="font-black text-sm text-primary">₱{(item.selling_price * item.qty).toFixed(2)}</div>
+                            </div>
                         </div>
-                        <div className="flex flex-col gap-1 ml-2">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 border" onClick={() => updateQty(item.id, 1, !!item.isPack)}>
-                                <Plus className="h-3 w-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 border" onClick={() => updateQty(item.id, -1, !!item.isPack)}>
-                                <Minus className="h-3 w-3" />
-                            </Button>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive absolute -top-2 -right-2 bg-card border shadow-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeFromCart(item.id, !!item.isPack)}>
-                            <XCircle className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive absolute -top-2 -left-2 bg-card border shadow-md rounded-full opacity-0 group-hover:opacity-100 lg:group-hover:opacity-100 transition-opacity" onClick={() => removeFromCart(item.id, !!item.isPack)}>
+                            <XCircle className="h-4 w-4 fill-destructive text-white" />
                         </Button>
                     </div>
                 ))
@@ -879,31 +897,27 @@ function CartList({ cart, updateQty, removeFromCart }: any) {
 // Subcomponent: Footer Summary
 function CartSummaryFooter({ subtotal, tax, total, cartCount, onCheckout, onHold, onDiscount }: any) {
     return (
-        <div className="p-4 bg-card border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
-            <div className="space-y-1 mb-4 text-sm">
-                <div className="flex justify-between text-muted-foreground">
+        <div className="p-4 bg-card border-t shadow-[0_-8px_10px_-1px_rgba(0,0,0,0.05)] z-10 rounded-t-2xl">
+            <div className="space-y-1 mb-4 text-sm px-1">
+                <div className="flex justify-between text-muted-foreground font-medium">
                     <span>Subtotal</span>
                     <span>₱{subtotal.toFixed(2)}</span>
                 </div>
-                {/* <div className="flex justify-between text-muted-foreground">
-                    <span>Tax (12%)</span>
-                    <span>₱{tax.toFixed(2)}</span>
-                </div> */}
-                <div className="flex justify-between text-xl font-extrabold mt-2 text-primary">
-                    <span>Total</span>
-                    <span>₱{total.toFixed(2)}</span>
+                <div className="flex justify-between items-center mt-2 border-t pt-2">
+                    <span className="text-sm font-bold text-muted-foreground uppercase">Grand Total</span>
+                    <span className="text-2xl font-black text-primary tracking-tight">₱{total.toFixed(2)}</span>
                 </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 h-12">
-                <Button variant="outline" className="col-span-1 h-full flex-col gap-0 text-xs" onClick={onHold} disabled={cartCount === 0}>
-                    <PauseCircle className="h-4 w-4" /> Hold
+            <div className="grid grid-cols-4 gap-2 h-14">
+                <Button variant="outline" className="col-span-1 h-full flex-col gap-1 text-[10px] border-2 hover:bg-muted" onClick={onHold} disabled={cartCount === 0}>
+                    <PauseCircle className="h-5 w-5 text-blue-600" /> <span>HOLD</span>
                 </Button>
-                <Button variant="outline" className="col-span-1 h-full flex-col gap-0 text-xs" onClick={onDiscount} disabled={cartCount === 0}>
-                    <Tag className="h-4 w-4" /> Disc.
+                <Button variant="outline" className="col-span-1 h-full flex-col gap-1 text-[10px] border-2 hover:bg-muted" onClick={onDiscount} disabled={cartCount === 0}>
+                    <Tag className="h-5 w-5 text-orange-600" /> <span>DISC.</span>
                 </Button>
-                <Button className="col-span-2 h-full bg-green-600 hover:bg-green-700 text-lg font-bold shadow-md" onClick={onCheckout} disabled={cartCount === 0}>
-                    PAY ₱{total.toFixed(2)}
+                <Button className="col-span-2 h-full bg-green-600 hover:bg-green-700 text-lg font-black shadow-lg active:scale-95 transition-transform" onClick={onCheckout} disabled={cartCount === 0}>
+                    CHECKOUT
                 </Button>
             </div>
         </div>
