@@ -260,6 +260,7 @@ export default function Inventory() {
   };
 
   const openStock = (product: Product, type: 'add' | 'remove') => {
+    setSelectedProduct(product);
     setStockAdjustment({ type, quantity: '', reason: '' });
     setIsStockOpen(true);
   };
@@ -310,7 +311,7 @@ export default function Inventory() {
   }
 
   return (
-    <div className={`p-4 ${isMobileLayout ? 'md:p-4' : 'md:p-6'} h-full ${!isMobileLayout ? 'md:h-[calc(100vh-4rem)]' : ''} flex flex-col gap-4 md:gap-6 overflow-y-auto md:overflow-hidden ${isMobileLayout ? 'pb-20' : ''}`}>
+    <div className={`p-4 ${isMobileLayout ? 'md:p-4' : 'md:p-6'} min-h-screen flex flex-col gap-4 md:gap-6 ${isMobileLayout ? 'pb-20' : ''}`}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
@@ -429,7 +430,7 @@ export default function Inventory() {
                       </TableCell>
                       <TableCell className="mobile-table-cell">
                         <span className="mobile-table-cell-label">Price:</span>
-                        ₱{product.selling_price.toFixed(2)}
+                        ₱{(Number(product.selling_price) || 0).toFixed(2)}
                       </TableCell>
                       <TableCell className="mobile-table-cell">
                         <span className="mobile-table-cell-label">Status:</span>
