@@ -116,7 +116,7 @@ export default function POS() {
             setLoading(true);
             const { data, error } = await supabase
                 .from('products')
-                .select('*')
+                .select('id, name, selling_price, category, current_stock, unit_of_measure, sku, image_url')
                 .gt('current_stock', 0)
                 .order('name');
 
@@ -142,7 +142,7 @@ export default function POS() {
 
             const { data } = await supabase
                 .from('store_settings')
-                .select('*')
+                .select('store_name, store_address, store_phone')
                 .eq('user_id', user.id)
                 .single();
 

@@ -46,7 +46,7 @@ const Index = () => {
       // 1. Fetch all in-stock products
       const { data: productsData, error: productsError } = await supabase
         .from("products")
-        .select("*")
+        .select("id, name, selling_price, category, current_stock, unit_of_measure, image_url, user_id, created_at, description")
         .gt("current_stock", 0)
         .order("created_at", { ascending: false });
 
@@ -67,7 +67,7 @@ const Index = () => {
       if (userIds.length > 0) {
         const { data: storeData, error: storeError } = await supabase
           .from("store_settings")
-          .select("*")
+          .select("user_id, store_name, profile_url")
           .in("user_id", userIds);
 
         if (!storeError && storeData) {
@@ -85,7 +85,7 @@ const Index = () => {
       // 4. Merge data
       const enrichedProducts: Product[] = productsData.map(p => ({
         ...p,
-        images: Array.isArray(p.images) ? (p.images as string[]) : (p.image_url ? [p.image_url] : []),
+        images: (p as any).images && Array.isArray((p as any).images) ? ((p as any).images as string[]) : (p.image_url ? [p.image_url] : []),
         store: p.user_id && storeMap[p.user_id] ? storeMap[p.user_id] : null
       }));
 

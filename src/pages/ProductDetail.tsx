@@ -39,7 +39,7 @@ const ProductDetail = () => {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select("id, name, selling_price, category, description, image_url, current_stock, unit_of_measure, sku")
         .eq("id", productId)
         .single();
 

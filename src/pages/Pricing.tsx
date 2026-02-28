@@ -351,7 +351,7 @@ const Pricing = () => {
 
       const multiplier = type === 'increase' ? (1 + percent / 100) : (1 - percent / 100);
 
-      let query = supabase.from("products").select("*");
+      let query = supabase.from("products").select("id, selling_price, category");
       if (bulkUpdateCategory !== "all") {
         query = query.eq("category", bulkUpdateCategory as any);
       }
@@ -400,7 +400,7 @@ const Pricing = () => {
 
   const handlePsychologicalPricing = async () => {
     try {
-      const { data: productsToUpdate, error: fetchError } = await supabase.from("products").select("*");
+      const { data: productsToUpdate, error: fetchError } = await supabase.from("products").select("id, selling_price");
       if (fetchError) throw fetchError;
 
       let updatedCount = 0;
