@@ -44,7 +44,7 @@ const ProductDetail = () => {
         .single();
 
       if (error) throw error;
-      const images = Array.isArray(data.images) ? (data.images as string[]) : (data.image_url ? [data.image_url] : []);
+      const images = (data as any).images && Array.isArray((data as any).images) ? ((data as any).images as string[]) : (data.image_url ? [data.image_url] : []);
       const productData: Product = {
         ...data,
         images: images.length > 0 ? images : getMockImagesByCategory(data.category || "")
