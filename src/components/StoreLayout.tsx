@@ -20,7 +20,7 @@ const StoreLayout = () => {
   const [cartCount, setCartCount] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const { profileLink } = useProfileRedirect();
+  const { profilePath: profileLink } = useProfileRedirect();
 
   useEffect(() => {
     let mounted = true;

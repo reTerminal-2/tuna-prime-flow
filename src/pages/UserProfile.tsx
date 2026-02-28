@@ -135,25 +135,47 @@ const UserProfile = () => {
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("User not found");
+        return;
+      }
+
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `user-avatars/${fileName}`;
 
       setUploading(true);
 
+      // 1. Upload to Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file);
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
+      // 2. Get Public URL
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const publicUrl = data.publicUrl;
 
-      setProfile(prev => ({ ...prev, avatar_url: data.publicUrl }));
-      toast.success("Profile picture uploaded!");
+      // 3. Persist immediately to Database
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+      toast.success("Profile picture updated and saved!");
+
+      // Audit Log for avatar change
+      await auditService.log({
+        action: 'UPDATE',
+        entityType: 'profile',
+        newValues: { avatar_url: publicUrl }
+      });
 
     } catch (error: any) {
       console.error("Error uploading avatar:", error);
