@@ -157,90 +157,97 @@ const Customers = () => {
         <CardHeader className="px-4 py-3 md:px-6 md:py-4">
           <CardTitle className="text-lg md:text-xl">All Customers ({customers.length})</CardTitle>
         </CardHeader>
-        <CardContent className="p-0 md:p-6">
-          <div className="mobile-table-list">
-            <div className="mobile-table-header hidden md:grid md:grid-cols-7 gap-4 px-4 py-3 bg-muted/50 font-medium text-xs uppercase tracking-wider">
-              <div>Customer</div>
-              <div>Segment</div>
-              <div>Email</div>
-              <div className="text-center">Orders</div>
-              <div className="text-right">Spent</div>
-              <div className="text-right">Last Order</div>
-              <div className="text-center">Action</div>
-            </div>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table className="mobile-table-list">
+              <TableHeader className="mobile-table-header">
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Segment</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead className="text-center">Orders</TableHead>
+                  <TableHead className="text-right">Spent</TableHead>
+                  <TableHead className="text-right">Last Order</TableHead>
+                  <TableHead className="text-center">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {customers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                      No customers found yet.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  customers.map((customer) => {
+                    const segment = getCustomerSegment(customer.id);
+                    return (
+                      <TableRow key={customer.id} className="mobile-table-row items-center border-b md:border-none p-4 md:p-0">
+                        <TableCell className="mobile-table-cell">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={customer.avatar_url || ""} />
+                              <AvatarFallback>{customer.full_name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-sm md:text-base">{customer.full_name}</span>
+                              <span className="text-xs text-muted-foreground md:hidden">{customer.email}</span>
+                            </div>
+                          </div>
+                        </TableCell>
 
-            <div className="divide-y">
-              {customers.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">
-                  No customers found yet.
-                </div>
-              ) : (
-                customers.map((customer) => {
-                  const segment = getCustomerSegment(customer.id);
-                  return (
-                    <div key={customer.id} className="mobile-table-row items-center p-4 md:p-4 hover:bg-muted/30 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 md:h-10 md:w-10">
-                          <AvatarImage src={customer.avatar_url || ""} />
-                          <AvatarFallback>{customer.full_name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-sm md:text-base">{customer.full_name}</span>
-                          <span className="text-xs text-muted-foreground md:hidden">{customer.email}</span>
-                        </div>
-                      </div>
+                        <TableCell className="mobile-table-cell">
+                          <span className="mobile-table-cell-label">Segment</span>
+                          {segment && (
+                            <Badge className="text-[10px] md:text-xs" variant={
+                              segment.segment === 'VIP' ? 'default' :
+                                segment.segment === 'At Risk' ? 'destructive' :
+                                  segment.segment === 'Loyal' ? 'secondary' : 'outline'
+                            }>
+                              {segment.segment}
+                            </Badge>
+                          )}
+                        </TableCell>
 
-                      <div className="mobile-table-cell mt-2 md:mt-0">
-                        <span className="mobile-table-cell-label">Segment</span>
-                        {segment && (
-                          <Badge className="text-[10px] md:text-xs" variant={
-                            segment.segment === 'VIP' ? 'default' :
-                              segment.segment === 'At Risk' ? 'destructive' :
-                                segment.segment === 'Loyal' ? 'secondary' : 'outline'
-                          }>
-                            {segment.segment}
-                          </Badge>
-                        )}
-                      </div>
+                        <TableCell className="mobile-table-cell hidden md:table-cell truncate max-w-[200px]">
+                          {customer.email}
+                        </TableCell>
 
-                      <div className="mobile-table-cell hidden md:block truncate text-sm">
-                        {customer.email}
-                      </div>
+                        <TableCell className="mobile-table-cell md:text-center">
+                          <span className="mobile-table-cell-label">Orders</span>
+                          {customer.total_orders}
+                        </TableCell>
 
-                      <div className="mobile-table-cell md:text-center text-sm">
-                        <span className="mobile-table-cell-label">Orders</span>
-                        {customer.total_orders}
-                      </div>
+                        <TableCell className="mobile-table-cell md:text-right font-medium">
+                          <span className="mobile-table-cell-label">Spent</span>
+                          ₱{customer.total_spent.toFixed(2)}
+                        </TableCell>
 
-                      <div className="mobile-table-cell md:text-right font-medium text-sm">
-                        <span className="mobile-table-cell-label">Spent</span>
-                        ₱{customer.total_spent.toFixed(2)}
-                      </div>
+                        <TableCell className="mobile-table-cell md:text-right text-muted-foreground">
+                          <span className="mobile-table-cell-label">Last Order</span>
+                          {new Date(customer.last_order_date).toLocaleDateString()}
+                        </TableCell>
 
-                      <div className="mobile-table-cell md:text-right text-xs md:text-sm text-muted-foreground">
-                        <span className="mobile-table-cell-label">Last Order</span>
-                        {new Date(customer.last_order_date).toLocaleDateString()}
-                      </div>
-
-                      <div className="mobile-table-cell items-center gap-2 md:justify-center mt-2 md:mt-0">
-                        <span className="mobile-table-cell-label">Action</span>
-                        {segment && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-full md:w-8 p-1 gap-2 md:gap-0"
-                            onClick={() => toast.success(`Action: ${segment.actionableTip}`)}
-                          >
-                            <Gift className="h-4 w-4 text-primary" />
-                            <span className="md:hidden text-xs">AI Tip</span>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                        <TableCell className="mobile-table-cell md:text-center">
+                          <span className="mobile-table-cell-label">Action</span>
+                          {segment && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-full md:w-8 p-1 gap-2 md:gap-0"
+                              onClick={() => toast.success(`Action: ${segment.actionableTip}`)}
+                            >
+                              <Gift className="h-4 w-4 text-primary" />
+                              <span className="md:hidden text-xs">AI Tip</span>
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
