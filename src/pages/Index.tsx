@@ -8,7 +8,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useIsMobileLayout } from "@/hooks/use-layout-mode";
-import { getFallbackImage } from "@/lib/mockImages";
+import { getFallbackImage, getMockImagesByCategory } from "@/lib/mockImages";
+import { QuickViewDialog } from "@/components/marketplace/QuickViewDialog";
+import { Eye, ShoppingCart as CartIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Product {
   id: string;
@@ -29,7 +32,10 @@ interface Product {
 const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [category, setCategory] = useState<string>("all");
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -113,6 +119,8 @@ const Index = () => {
     toast.success("Added to cart");
   };
 
+  const categories = ["all", "fresh", "frozen", "canned", "dried"];
+
   const filteredProducts = category === "all"
     ? products
     : products.filter(p => p.category === category);
@@ -175,23 +183,64 @@ const Index = () => {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {filteredProducts.map((product) => (
-            <Card key={product.id} className="group overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="p-0 overflow-hidden">
-                <div className="h-48 w-full bg-muted relative group-hover:scale-105 transition-transform duration-500">
-                  {product.images && product.images.length > 0 ? (
-                    <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
-                  ) : product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <img src={getFallbackImage(product.category)} alt={product.name} className="w-full h-full object-cover opacity-80" />
-                  )}
-                  <Badge className="absolute top-2 right-2 bg-white/90 text-primary hover:bg-white backdrop-blur-sm border-none shadow-sm capitalize">
+            <Card key={product.id} className="group overflow-hidden border-none shadow-premium hover:shadow-hover transition-all duration-500 bg-white">
+              <CardHeader className="p-0 overflow-hidden relative">
+                <div className="h-64 w-full bg-muted relative overflow-hidden">
+                  {/* Primary Image */}
+                  <div className="absolute inset-0 transition-opacity duration-700 group-hover:opacity-0">
+                    {product.images && product.images.length > 0 ? (
+                      <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                    ) : product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={getFallbackImage(product.category)} alt={product.name} className="w-full h-full object-cover" />
+                    )}
+                  </div>
+
+                  {/* Secondary Image (Hover) */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 scale-105 group-hover:scale-100 transition-transform">
+                    {product.images && product.images.length > 1 ? (
+                      <img src={product.images[1]} alt={product.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={getMockImagesByCategory(product.category)[1] || getFallbackImage(product.category)} alt={product.name} className="w-full h-full object-cover" />
+                    )}
+                  </div>
+
+                  {/* Quick Action Overlay */}
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3 z-10">
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="h-12 w-12 rounded-full shadow-premium hover:scale-110 active:scale-95 transition-all bg-white/90 backdrop-blur-sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setQuickViewProduct(product);
+                        setIsQuickViewOpen(true);
+                      }}
+                    >
+                      <Eye className="h-5 w-5 text-primary" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="h-12 w-12 rounded-full shadow-premium hover:scale-110 active:scale-95 transition-all bg-primary text-white"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleAddToCart(product);
+                      }}
+                    >
+                      <CartIcon className="h-5 w-5" />
+                    </Button>
+                  </div>
+
+                  <Badge className="absolute top-4 left-4 bg-white/90 text-primary hover:bg-white backdrop-blur-sm border-none shadow-sm capitalize px-3 py-1 text-[10px] font-bold tracking-widest z-20">
                     {product.category}
                   </Badge>
+
                   {product.images && product.images.length > 1 && (
-                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm flex items-center gap-1 font-bold">
+                    <div className="absolute bottom-4 right-4 bg-black/60 text-white text-[10px] px-2.5 py-1 rounded-full backdrop-blur-sm flex items-center gap-1.5 font-bold z-20">
                       <LayoutGrid className="h-3 w-3" />
-                      +{product.images.length - 1}
+                      +{product.images.length - 1} photos
                     </div>
                   )}
                 </div>
@@ -247,6 +296,13 @@ const Index = () => {
           <p className="text-muted-foreground mb-4">No products found.</p>
         </div>
       )}
+      {/* Quick View Dialog */}
+      <QuickViewDialog
+        product={quickViewProduct}
+        isOpen={isQuickViewOpen}
+        onClose={() => setIsQuickViewOpen(false)}
+        onAddToCart={handleAddToCart}
+      />
     </div>
   );
 };
