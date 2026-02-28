@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Star, Filter } from "lucide-react";
+import { ShoppingCart, Star, Filter, Store } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
@@ -15,8 +16,9 @@ interface Product {
   selling_price: number;
   current_stock: number;
   unit_of_measure: string;
-  profiles?: {
-    full_name: string | null;
+  store?: {
+    store_name: string | null;
+    profile_url: string | null;
   } | null;
 }
 
@@ -49,18 +51,23 @@ const Index = () => {
       // 2. Extract unique user IDs to fetch seller names
       const userIds = [...new Set(productsData.map(p => p.user_id).filter(Boolean))];
 
-      // 3. Fetch profiles for these users
-      const profilesMap: Record<string, string> = {};
+      // 3. Fetch store settings for these users
+      const storeMap: Record<string, { store_name: string | null, profile_url: string | null }> = {};
 
       if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", userIds);
+        const { data: storeData, error: storeError } = await supabase
+          .from("store_settings")
+          .select("user_id, store_name, profile_url")
+          .in("user_id", userIds);
 
-        if (!profilesError && profilesData) {
-          profilesData.forEach(p => {
-            if (p.full_name) profilesMap[p.id] = p.full_name;
+        if (!storeError && storeData) {
+          storeData.forEach(s => {
+            if (s.user_id) {
+              storeMap[s.user_id] = {
+                store_name: s.store_name,
+                profile_url: s.profile_url
+              };
+            }
           });
         }
       }
@@ -68,7 +75,7 @@ const Index = () => {
       // 4. Merge data
       const enrichedProducts: Product[] = productsData.map(p => ({
         ...p,
-        profiles: p.user_id && profilesMap[p.user_id] ? { full_name: profilesMap[p.user_id] } : null
+        store: p.user_id && storeMap[p.user_id] ? storeMap[p.user_id] : null
       }));
 
       setProducts(enrichedProducts);
@@ -182,11 +189,17 @@ const Index = () => {
                     <Link to={`/product/${product.id}`} className="hover:underline">
                       <CardTitle className="text-lg font-semibold line-clamp-1">{product.name}</CardTitle>
                     </Link>
-                    {product.profiles?.full_name && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Sold by: {product.profiles.full_name}
-                      </p>
-                    )}
+                    <div className="flex items-center gap-1.5 mt-1.5 pb-1">
+                      <Avatar className="h-4 w-4">
+                        <AvatarImage src={product.store?.profile_url || ""} />
+                        <AvatarFallback className="text-[8px] bg-primary/10">
+                          {product.store?.store_name?.charAt(0) || <Store className="h-2 w-2" />}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                        {product.store?.store_name || "Unknown Shop"}
+                      </span>
+                    </div>
                     <p className="text-sm text-muted-foreground mt-1 line-clamp-2 min-h-[2.5rem]">
                       {product.description || "No description available"}
                     </p>

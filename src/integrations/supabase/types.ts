@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          action: string
+          entity_type: string
+          entity_id: string | null
+          old_values: Json | null
+          new_values: Json | null
+          ip_address: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          action: string
+          entity_type: string
+          entity_id?: string | null
+          old_values?: Json | null
+          new_values?: Json | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          action?: string
+          entity_type?: string
+          entity_id?: string | null
+          old_values?: Json | null
+          new_values?: Json | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      },
       chat_history: {
         Row: {
           id: string
@@ -327,6 +366,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      store_settings: {
+        Row: {
+          id: string
+          user_id: string | null
+          notify_low_stock: boolean | null
+          notify_expiring: boolean | null
+          notify_new_order: boolean | null
+          stock_alert_days: number | null
+          store_name: string | null
+          store_description: string | null
+          store_address: string | null
+          store_email: string | null
+          store_phone: string | null
+          social_facebook: string | null
+          social_instagram: string | null
+          profile_url: string | null
+          cover_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          notify_low_stock?: boolean | null
+          notify_expiring?: boolean | null
+          notify_new_order?: boolean | null
+          stock_alert_days?: number | null
+          store_name?: string | null
+          store_description?: string | null
+          store_address?: string | null
+          store_email?: string | null
+          store_phone?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          profile_url?: string | null
+          cover_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          notify_low_stock?: boolean | null
+          notify_expiring?: boolean | null
+          notify_new_order?: boolean | null
+          stock_alert_days?: number | null
+          store_name?: string | null
+          store_description?: string | null
+          store_address?: string | null
+          store_email?: string | null
+          store_phone?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          profile_url?: string | null
+          cover_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       suppliers: {
         Row: {

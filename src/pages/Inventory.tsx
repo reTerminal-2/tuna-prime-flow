@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Package, Plus, Search, AlertCircle, RefreshCw, Sparkles, TrendingUp, Edit, Trash2, ArrowUpCircle, Minus } from "lucide-react";
 import { toast } from "sonner";
+import { auditService } from "@/services/auditService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -121,6 +122,13 @@ export default function Inventory() {
 
       if (error) throw error;
 
+      // Audit Log
+      await auditService.log({
+        action: 'CREATE',
+        entityType: 'product',
+        newValues: newProduct
+      });
+
       toast.success("Product added successfully");
       setIsAddDialogOpen(false);
       setNewProduct({ name: "", sku: "", category: "fresh", price: "", cost: "", stock: "", unit: "kg" });
@@ -145,6 +153,15 @@ export default function Inventory() {
       }).eq('id', selectedProduct.id);
 
       if (error) throw error;
+
+      // Audit Log
+      await auditService.log({
+        action: 'UPDATE',
+        entityType: 'product',
+        entityId: selectedProduct.id,
+        newValues: selectedProduct
+      });
+
       toast.success("Product updated successfully");
       setIsEditOpen(false);
       fetchProducts();
@@ -158,6 +175,14 @@ export default function Inventory() {
     try {
       const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;
+
+      // Audit Log
+      await auditService.log({
+        action: 'DELETE',
+        entityType: 'product',
+        entityId: id
+      });
+
       toast.success("Product deleted");
       fetchProducts();
     } catch (err: any) {
@@ -197,6 +222,19 @@ export default function Inventory() {
       }).eq('id', selectedProduct.id);
 
       if (prodError) throw prodError;
+
+      // Audit Log
+      await auditService.log({
+        action: stockAdjustment.type === 'add' ? 'CREATE' : 'DELETE',
+        entityType: 'stock_adjustment',
+        entityId: selectedProduct.id,
+        newValues: {
+          type: stockAdjustment.type,
+          quantity: qty,
+          reason: stockAdjustment.reason,
+          newStock
+        }
+      });
 
       toast.success("Stock updated");
       setIsStockOpen(false);

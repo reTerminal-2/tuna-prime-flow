@@ -8,6 +8,7 @@ import { Loader2, Sparkles, Building2, ShieldCheck } from "lucide-react";
 import { aiService } from "@/services/aiService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { auditService } from "@/services/auditService";
 
 interface AISupplierFormProps {
     open: boolean;
@@ -73,6 +74,13 @@ export const AISupplierForm: React.FC<AISupplierFormProps> = ({ open, onOpenChan
                 });
 
             if (error) throw error;
+
+            // 2. System Audit Log
+            await auditService.log({
+                action: 'CREATE',
+                entityType: 'supplier',
+                newValues: formData
+            });
 
             toast.success("Supplier onboarded successfully!");
             onOpenChange(false);

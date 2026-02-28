@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
+import { auditService } from "@/services/auditService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -32,18 +33,18 @@ const Settings = () => {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('profiles')
-        .select('notification_preferences, stock_alert_days')
-        .eq('id', user.id)
+        .from('store_settings')
+        .select('*')
+        .eq('user_id', user.id)
         .single();
 
       if (error) throw error;
 
       if (data) {
         setSettings({
-          notify_low_stock: data.notification_preferences?.low_stock ?? true,
-          notify_expiring: data.notification_preferences?.expiring_items ?? true,
-          notify_new_order: data.notification_preferences?.new_orders ?? true,
+          notify_low_stock: data.notify_low_stock ?? true,
+          notify_expiring: data.notify_expiring ?? true,
+          notify_new_order: data.notify_new_order ?? true,
           stock_alert_days: data.stock_alert_days?.toString() || "7",
         });
       }
@@ -61,16 +62,15 @@ const Settings = () => {
       if (!user) return;
 
       const { error } = await supabase
-        .from('profiles')
-        .update({
-          notification_preferences: {
-            low_stock: settings.notify_low_stock,
-            expiring_items: settings.notify_expiring,
-            new_orders: settings.notify_new_order,
-          },
+        .from('store_settings')
+        .upsert({
+          user_id: user.id,
+          notify_low_stock: settings.notify_low_stock,
+          notify_expiring: settings.notify_expiring,
+          notify_new_order: settings.notify_new_order,
           stock_alert_days: parseInt(settings.stock_alert_days),
-        })
-        .eq('id', user.id);
+          updated_at: new Date().toISOString(),
+        });
 
       if (error) throw error;
 
@@ -78,6 +78,13 @@ const Settings = () => {
       localStorage.setItem("stockAlertDays", settings.stock_alert_days);
 
       toast.success("Settings saved successfully");
+
+      // Audit Log
+      await auditService.log({
+        action: 'UPDATE',
+        entityType: 'store_settings',
+        newValues: settings
+      });
     } catch (error) {
       console.error('Error saving settings:', error);
       toast.error("Failed to save settings");

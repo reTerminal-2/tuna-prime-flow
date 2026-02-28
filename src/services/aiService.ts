@@ -3,13 +3,14 @@ import { addDays, format, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { toast } from "sonner";
+import { auditService } from "./auditService";
 
 // --- Types ---
 
 export interface ChatResponse {
     message: string;
     proposedAction?: {
-        type: 'UPDATE_PRICE' | 'RESTOCK_ITEM' | 'CREATE_DISCOUNT' | 'EMAIL_CUSTOMER' | 'CREATE_PRODUCT' | 'DELETE_PRODUCT' | 'UPDATE_ORDER_STATUS' | 'BLOCK_CUSTOMER' | 'GENERIC_DB_ACTION' | 'MANAGE_USER_ROLE' | 'CREATE_SUPPLIER' | 'UPDATE_SUPPLIER' | 'DELETE_SUPPLIER' | 'OPEN_PRODUCT_FORM' | 'OPEN_SUPPLIER_FORM' | 'OPEN_CUSTOMER_FORM' | 'OPEN_DISCOUNT_FORM' | 'OPEN_ORDER_FORM' | 'OPEN_REFUND_FORM' | 'OPEN_EXPENSE_FORM' | 'OPEN_REPORT_SETTINGS';
+        type: 'UPDATE_PRICE' | 'RESTOCK_ITEM' | 'CREATE_DISCOUNT' | 'EMAIL_CUSTOMER' | 'CREATE_PRODUCT' | 'DELETE_PRODUCT' | 'UPDATE_ORDER_STATUS' | 'BLOCK_CUSTOMER' | 'GENERIC_DB_ACTION' | 'MANAGE_USER_ROLE' | 'CREATE_SUPPLIER' | 'UPDATE_SUPPLIER' | 'DELETE_SUPPLIER' | 'OPEN_PRODUCT_FORM' | 'OPEN_SUPPLIER_FORM' | 'OPEN_CUSTOMER_FORM' | 'OPEN_DISCOUNT_FORM' | 'OPEN_ORDER_FORM' | 'OPEN_REFUND_FORM' | 'OPEN_EXPENSE_FORM' | 'OPEN_REPORT_SETTINGS' | 'ADD_TO_CART';
         description: string;
         payload: any;
     };
@@ -601,12 +602,27 @@ ${fewShotBlock}`;
         try {
             if (action.type === 'UPDATE_PRICE') {
                 await supabase.from('products').update({ selling_price: action.payload.newPrice }).eq('id', action.payload.productId);
+
+                await auditService.log({
+                    action: 'AI_ACTION',
+                    entityType: 'product',
+                    entityId: action.payload.productId,
+                    newValues: { action: 'UPDATE_PRICE', newPrice: action.payload.newPrice }
+                });
+
                 return { success: true };
             }
             if (action.type === 'RESTOCK_ITEM') {
                 const { data: product } = await supabase.from('products').select('current_stock').eq('id', action.payload.productId).single();
                 if (product) {
                     await supabase.from('products').update({ current_stock: product.current_stock + action.payload.quantity }).eq('id', action.payload.productId);
+
+                    await auditService.log({
+                        action: 'AI_ACTION',
+                        entityType: 'product',
+                        entityId: action.payload.productId,
+                        newValues: { action: 'RESTOCK_ITEM', quantity: action.payload.quantity }
+                    });
                 }
                 return { success: true };
             }

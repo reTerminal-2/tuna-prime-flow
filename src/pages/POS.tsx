@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
-import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Banknote, Calculator, Sparkles, MessageSquare, PackageOpen, Boxes, UserCircle, Users, Clock, History, MoreVertical, Receipt, XCircle, PauseCircle, Tag, Settings, LogOut, Package } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Banknote, Calculator, Sparkles, MessageSquare, PackageOpen, Boxes, UserCircle, Users, Clock, History, MoreVertical, Receipt, XCircle, PauseCircle, Tag, Settings, LogOut, Package, Box } from "lucide-react";
 import { toast } from "sonner";
+import { auditService } from "@/services/auditService";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { aiService, ChatResponse } from "@/services/aiService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { useIsMobileLayout } from "@/hooks/use-layout-mode";
+import { generateReceiptPDF } from "@/lib/receiptGenerator";
 
 interface Product {
     id: string;
@@ -26,6 +28,7 @@ interface Product {
     current_stock: number;
     selling_price: number;
     unit_of_measure: string;
+    cost_price?: number;
 }
 
 interface CartItem extends Product {
@@ -99,10 +102,12 @@ export default function POS() {
     const [aiMessage, setAiMessage] = useState("");
     const [aiResponse, setAiResponse] = useState<string | null>(null);
     const [aiLoading, setAiLoading] = useState(false);
+    const [storeProfile, setStoreProfile] = useState<any>(null);
 
     useEffect(() => {
         fetchProducts();
         fetchCustomers();
+        fetchStoreSettings();
     }, []);
 
     const fetchProducts = async () => {
@@ -125,8 +130,31 @@ export default function POS() {
     };
 
     const fetchCustomers = async () => {
-        const { data } = await supabase.from('customers').select('id, full_name, email').limit(50);
-        if (data) setCustomers(data);
+        const { data } = await supabase.from('profiles').select('id, full_name, email').limit(50);
+        if (data) setCustomers(data as any);
+    };
+
+    const fetchStoreSettings = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data } = await supabase
+                .from('store_settings')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+
+            if (data) {
+                setStoreProfile({
+                    name: data.store_name,
+                    address: data.store_address,
+                    phone: data.store_phone
+                });
+            }
+        } catch (err) {
+            console.error("Error fetching store settings:", err);
+        }
     };
 
     const addToCart = (product: Product, packMultiplier = 1, packName?: string) => {
@@ -215,19 +243,129 @@ export default function POS() {
     const handleCheckout = async () => {
         if (cart.length === 0) return;
 
-        // Save order to DB (Mock)
-        toast.success(`Processed Payment: ₱${grandTotal.toFixed(2)}`);
+        const { data: { user } } = await supabase.auth.getUser();
+        const orderId = `OR-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+        const timestamp = new Date();
 
-        // Update Stock (Optimistic UI)
-        // In real app, we'd wait for DB confirmation
-        setProducts(prev => prev.map(p => {
-            const inCart = cart.find(c => c.id === p.id);
-            if (inCart) return { ...p, current_stock: p.current_stock - inCart.qty };
-            return p;
-        }));
+        try {
+            // 1. Save to orders table (if it exists)
+            const { data: orderData, error: orderError } = await supabase
+                .from('orders')
+                .insert({
+                    id: orderId,
+                    total_amount: grandTotal,
+                    status: 'completed',
+                    user_id: user?.id || null,
+                    created_at: timestamp.toISOString()
+                })
+                .select()
+                .single();
 
-        setIsPaymentOpen(false);
-        clearCart();
+            // 2. Log individual transactions for each item
+            const transactionPromises = cart.map(item => {
+                const itemTotal = (item.selling_price * item.qty) * (1 - (item.discount || 0) / 100);
+                const profit = itemTotal - ((item.cost_price || 0) * item.qty);
+
+                return supabase.from('transactions').insert({
+                    product_id: item.id,
+                    quantity: item.qty,
+                    unit_price: item.selling_price,
+                    total_amount: itemTotal,
+                    cost_price: item.cost_price || 0,
+                    profit: profit,
+                    created_by: user?.id || 'system',
+                    notes: `Order ${orderId}`,
+                    transaction_date: timestamp.toISOString()
+                });
+            });
+
+            await Promise.all(transactionPromises);
+
+            // 3. Audit Log
+            await auditService.log({
+                action: 'CREATE',
+                entityType: 'order',
+                entityId: orderId,
+                newValues: {
+                    total: grandTotal,
+                    items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.selling_price })),
+                    customer: selectedCustomer?.full_name || 'Walk-in',
+                    paymentMethod: paymentMethod
+                }
+            });
+
+            // 4. Update Stock in DB
+            for (const item of cart) {
+                const { data: product } = await supabase
+                    .from('products')
+                    .select('current_stock')
+                    .eq('id', item.id)
+                    .single();
+
+                if (product) {
+                    await supabase
+                        .from('products')
+                        .update({ current_stock: Math.max(0, product.current_stock - item.qty) })
+                        .eq('id', item.id);
+                }
+            }
+
+            // 5. Success State
+            const transactionRecord = {
+                id: orderId,
+                date: timestamp,
+                customer: selectedCustomer,
+                items: [...cart],
+                subtotal: subtotal,
+                discount: totalDiscount,
+                total: grandTotal,
+                amountTendered: parseFloat(amountTendered) || grandTotal,
+                change: Math.max(0, (parseFloat(amountTendered) || 0) - grandTotal),
+                paymentMethod: paymentMethod
+            };
+
+            setLastTransaction(transactionRecord);
+
+            // 6. Generate and Download PDF
+            generateReceiptPDF({
+                orderId: orderId,
+                date: timestamp,
+                customer: selectedCustomer?.full_name || 'Walk-in',
+                cashier: 'Admin', // In real app, get from auth profile
+                items: cart.map(item => ({
+                    name: item.name,
+                    qty: item.qty,
+                    price: item.selling_price,
+                    discount: item.discount,
+                    total: (item.selling_price * item.qty) * (1 - (item.discount || 0) / 100)
+                })),
+                subtotal: subtotal,
+                discountTotal: totalDiscount,
+                taxTotal: tax,
+                grandTotal: grandTotal,
+                amountPaid: parseFloat(amountTendered) || grandTotal,
+                change: Math.max(0, (parseFloat(amountTendered) || 0) - grandTotal),
+                paymentMethod: paymentMethod,
+                storeProfile: storeProfile
+            });
+
+            toast.success(`Order ${orderId} completed! Receipt downloaded.`);
+
+            // Update local stock state
+            setProducts(prev => prev.map(p => {
+                const inCart = cart.find(c => c.id === p.id);
+                if (inCart) return { ...p, current_stock: p.current_stock - inCart.qty };
+                return p;
+            }));
+
+            setIsPaymentOpen(false);
+            setIsReceiptOpen(true);
+            clearCart();
+
+        } catch (err) {
+            console.error("Checkout error:", err);
+            toast.error("Failed to process order. Please check connection.");
+        }
     };
 
     const handleOpenShift = () => {
@@ -240,6 +378,14 @@ export default function POS() {
         setShiftData(shift);
         setIsShiftOpen(true);
         setIsShiftDialogOpen(false);
+
+        // Audit Log
+        auditService.log({
+            action: 'LOGIN',
+            entityType: 'user',
+            newValues: { shift_opened: true, starting_cash: shift.startingCash }
+        });
+
         toast.success("Shift opened");
     };
 
@@ -248,6 +394,14 @@ export default function POS() {
         setIsShiftOpen(false);
         setShiftData(null);
         setIsShiftDialogOpen(true);
+
+        // Audit Log
+        auditService.log({
+            action: 'LOGOUT',
+            entityType: 'user',
+            newValues: { shift_closed: true }
+        });
+
         toast.info("Shift closed");
     };
 
@@ -725,9 +879,10 @@ export default function POS() {
                     <ScrollArea className="h-[400px] pr-4 font-mono text-xs border rounded p-4 bg-white text-black shadow-inner">
                         {lastTransaction && (
                             <div className="space-y-2 text-center">
-                                <div className="font-bold text-lg">TUNFLOW MARKET</div>
-                                <div>123 Ocean Drive, Manila</div>
-                                <div>VAT REG: 123-456-789</div>
+                                <div className="font-bold text-lg uppercase">{storeProfile?.name || 'TUNFLOW MARKET'}</div>
+                                <div className="text-[10px]">{storeProfile?.address || '123 Ocean Drive, General Santos City'}</div>
+                                <div className="text-[10px]">VAT REG: 123-456-789-000</div>
+                                <div className="text-[10px]">TEL: {storeProfile?.phone || '(083) 552-4141'}</div>
                                 <Separator className="my-2 border-black" />
                                 <div className="flex justify-between">
                                     <span>OR #: {lastTransaction.id}</span>
@@ -778,6 +933,33 @@ export default function POS() {
                     </ScrollArea>
                     <DialogFooter className="flex-col sm:flex-row gap-2">
                         <Button variant="outline" onClick={() => setIsReceiptOpen(false)}>Close</Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() => generateReceiptPDF({
+                                orderId: lastTransaction.id,
+                                date: lastTransaction.date,
+                                customer: lastTransaction.customer?.full_name || 'Walk-in',
+                                cashier: 'Admin',
+                                items: lastTransaction.items.map((item: any) => ({
+                                    name: item.name,
+                                    qty: item.qty,
+                                    price: item.selling_price,
+                                    discount: item.discount,
+                                    total: (item.selling_price * item.qty) * (1 - (item.discount || 0) / 100)
+                                })),
+                                subtotal: lastTransaction.subtotal,
+                                discountTotal: lastTransaction.discount,
+                                taxTotal: lastTransaction.subtotal * 0.12,
+                                grandTotal: lastTransaction.total,
+                                amountPaid: lastTransaction.amountTendered,
+                                change: lastTransaction.change,
+                                paymentMethod: lastTransaction.paymentMethod,
+                                storeProfile: storeProfile
+                            })}
+                            className="gap-2"
+                        >
+                            <Box className="h-4 w-4" /> Download PDF
+                        </Button>
                         <Button onClick={() => window.print()} className="flex-1 gap-2">
                             <Receipt className="h-4 w-4" /> Print Receipt
                         </Button>

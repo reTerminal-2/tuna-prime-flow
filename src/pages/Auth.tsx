@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { toast } from "sonner";
 import { Fish, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
+import { auditService } from "@/services/auditService";
 
 // Validation schemas
 const loginSchema = z.object({
@@ -174,6 +175,14 @@ const Auth = () => {
       }
 
       toast.success("Login successful!");
+
+      // 2. System Audit Log
+      await auditService.log({
+        action: 'LOGIN',
+        entityType: 'user',
+        newValues: { email: loginData.email }
+      });
+
       // Navigation will be handled by onAuthStateChange
     } catch (error: any) {
       const errorMsg = error.message || "Login failed";

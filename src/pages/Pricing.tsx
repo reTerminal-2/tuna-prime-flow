@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calculator, TrendingDown, Clock, Receipt, Plus, Settings2, Sparkles, TrendingUp, DollarSign, BarChart3, Users, Percent, Search, Package } from "lucide-react";
 import { toast } from "sonner";
+import { auditService } from "@/services/auditService";
 import { aiService, AIInsight } from "@/services/aiService";
 import { StatCard } from "@/components/superadmin/StatCard";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -168,6 +169,14 @@ const Pricing = () => {
 
       if (error) throw error;
 
+      // Audit Log
+      await auditService.log({
+        action: 'UPDATE',
+        entityType: 'pricing_rule',
+        entityId: ruleId,
+        newValues: { is_active: !currentStatus }
+      });
+
       toast.success(`Rule ${!currentStatus ? "activated" : "deactivated"}`);
       fetchPricingRules();
     } catch (error: any) {
@@ -215,6 +224,13 @@ const Pricing = () => {
         .insert(ruleData);
 
       if (error) throw error;
+
+      // Audit Log
+      await auditService.log({
+        action: 'CREATE',
+        entityType: 'pricing_rule',
+        newValues: ruleData
+      });
 
       toast.success("Pricing rule created successfully");
       setIsCreateRuleOpen(false);
@@ -308,6 +324,13 @@ const Pricing = () => {
         }
       }
 
+      // Audit Log
+      await auditService.log({
+        action: 'UPDATE',
+        entityType: 'product',
+        newValues: { bulk_rule_application: true, updated_count: updatedCount }
+      });
+
       toast.success(`Applied pricing rules to ${updatedCount} products`);
       setIsApplyRulesOpen(false);
       fetchProducts();
@@ -330,7 +353,7 @@ const Pricing = () => {
 
       let query = supabase.from("products").select("*");
       if (bulkUpdateCategory !== "all") {
-        query = query.eq("category", bulkUpdateCategory);
+        query = query.eq("category", bulkUpdateCategory as any);
       }
 
       const { data: productsToUpdate, error: fetchError } = await query;
@@ -352,6 +375,19 @@ const Pricing = () => {
 
         if (!updateError) updatedCount++;
       }
+
+      // Audit Log
+      await auditService.log({
+        action: 'UPDATE',
+        entityType: 'product',
+        newValues: {
+          bulk_update: true,
+          type,
+          percent,
+          category: bulkUpdateCategory,
+          updated_count: updatedCount
+        }
+      });
 
       toast.success(`Updated prices for ${updatedCount} products`);
       fetchProducts();
@@ -381,6 +417,13 @@ const Pricing = () => {
           if (!updateError) updatedCount++;
         }
       }
+
+      // Audit Log
+      await auditService.log({
+        action: 'UPDATE',
+        entityType: 'product',
+        newValues: { psychological_pricing: true, updated_count: updatedCount }
+      });
 
       toast.success(`Applied psychological pricing to ${updatedCount} products`);
       fetchProducts();
@@ -420,6 +463,14 @@ const Pricing = () => {
 
   const handleSaveTaxSettings = () => {
     localStorage.setItem("taxSettings", JSON.stringify(taxSettings));
+
+    // Audit Log
+    auditService.log({
+      action: 'UPDATE',
+      entityType: 'store_settings',
+      newValues: taxSettings
+    });
+
     toast.success("Tax settings saved successfully");
   };
 

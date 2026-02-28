@@ -9,13 +9,14 @@ import { Loader2, Sparkles, TrendingUp, AlertCircle } from "lucide-react";
 import { aiService } from "@/services/aiService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { auditService } from "@/services/auditService";
 
 interface AIPricingRuleFormProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     initialData?: {
         name?: string;
-        rule_type?: 'markdown' | 'markup';
+        rule_type?: 'expiration_based' | 'age_based' | 'demand_based' | 'manual';
         price_adjustment_percent?: number;
         description?: string;
         applies_to_category?: string;
@@ -26,7 +27,7 @@ interface AIPricingRuleFormProps {
 export const AIPricingRuleForm: React.FC<AIPricingRuleFormProps> = ({ open, onOpenChange, initialData, onSuccess }) => {
     const [formData, setFormData] = useState({
         name: "",
-        rule_type: "markdown" as "markdown" | "markup",
+        rule_type: "expiration_based" as "expiration_based" | "age_based" | "demand_based" | "manual",
         price_adjustment_percent: "5",
         description: "",
         applies_to_category: "fresh",
@@ -44,7 +45,7 @@ export const AIPricingRuleForm: React.FC<AIPricingRuleFormProps> = ({ open, onOp
             setFormData(prev => ({
                 ...prev,
                 name: initialData.name || prev.name,
-                rule_type: initialData.rule_type || prev.rule_type,
+                rule_type: (initialData.rule_type as any) || prev.rule_type,
                 price_adjustment_percent: initialData.price_adjustment_percent?.toString() || prev.price_adjustment_percent,
                 description: initialData.description || prev.description,
                 applies_to_category: initialData.applies_to_category || prev.applies_to_category
@@ -116,6 +117,13 @@ export const AIPricingRuleForm: React.FC<AIPricingRuleFormProps> = ({ open, onOp
 
             if (error) throw error;
 
+            // 2. System Audit Log
+            await auditService.log({
+                action: 'CREATE',
+                entityType: 'pricing_rule',
+                newValues: ruleData
+            });
+
             toast.success("Pricing rule created successfully!");
             onOpenChange(false);
             if (onSuccess) onSuccess();
@@ -123,7 +131,7 @@ export const AIPricingRuleForm: React.FC<AIPricingRuleFormProps> = ({ open, onOp
             // Reset form
             setFormData({
                 name: "",
-                rule_type: "markdown",
+                rule_type: "expiration_based",
                 price_adjustment_percent: "5",
                 description: "",
                 applies_to_category: "fresh",
@@ -174,8 +182,10 @@ export const AIPricingRuleForm: React.FC<AIPricingRuleFormProps> = ({ open, onOp
                                     <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="markup">Markup (Price Up)</SelectItem>
-                                    <SelectItem value="markdown">Markdown (Price Down)</SelectItem>
+                                    <SelectItem value="expiration_based">Expiration Based</SelectItem>
+                                    <SelectItem value="age_based">Age Based</SelectItem>
+                                    <SelectItem value="demand_based">Demand Based</SelectItem>
+                                    <SelectItem value="manual">Manual Policy</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

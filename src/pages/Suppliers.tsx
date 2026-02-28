@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { auditService } from "@/services/auditService";
 import { Plus, Trash2, Users as UsersIcon, Sparkles, Truck, Award } from "lucide-react";
 import { z } from "zod";
 import { aiService, SupplierScore } from "@/services/aiService";
@@ -121,6 +122,13 @@ const Suppliers = () => {
 
       if (error) throw error;
 
+      // Audit Log
+      await auditService.log({
+        action: 'CREATE',
+        entityType: 'supplier',
+        newValues: validationResult.data
+      });
+
       toast.success("Supplier added successfully");
       setIsAddDialogOpen(false);
       setNewSupplier({
@@ -153,6 +161,13 @@ const Suppliers = () => {
       const { error } = await supabase.from("suppliers").delete().eq("id", id);
 
       if (error) throw error;
+
+      // Audit Log
+      await auditService.log({
+        action: 'DELETE',
+        entityType: 'supplier',
+        entityId: id
+      });
 
       toast.success("Supplier deleted successfully");
       fetchSuppliers();

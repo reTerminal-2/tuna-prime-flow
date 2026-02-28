@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { auditService } from "@/services/auditService";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,9 +66,9 @@ const UserProfile = () => {
           address: data.address || "",
           phone_number: data.phone_number || "",
           social_media_links: {
-            facebook: data.social_media_links?.facebook || "",
-            twitter: data.social_media_links?.twitter || "",
-            instagram: data.social_media_links?.instagram || ""
+            facebook: (data.social_media_links as any)?.facebook || "",
+            twitter: (data.social_media_links as any)?.twitter || "",
+            instagram: (data.social_media_links as any)?.instagram || ""
           }
         });
       }
@@ -85,8 +86,10 @@ const UserProfile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const updates = {
+      const updates: any = {
         id: user.id,
+        user_id: user.id,
+        email: user.email,
         full_name: profile.full_name,
         avatar_url: profile.avatar_url,
         address: profile.address,
@@ -101,6 +104,13 @@ const UserProfile = () => {
 
       if (error) throw error;
       toast.success("Profile updated successfully");
+
+      // Audit Log
+      await auditService.log({
+        action: 'UPDATE',
+        entityType: 'profile',
+        newValues: profile
+      });
     } catch (error: any) {
       console.error("Error saving profile:", error);
       toast.error("Failed to save profile");
@@ -124,7 +134,7 @@ const UserProfile = () => {
       if (!event.target.files || event.target.files.length === 0) {
         return;
       }
-      
+
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
@@ -141,10 +151,10 @@ const UserProfile = () => {
       }
 
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      
+
       setProfile(prev => ({ ...prev, avatar_url: data.publicUrl }));
       toast.success("Profile picture uploaded!");
-      
+
     } catch (error: any) {
       console.error("Error uploading avatar:", error);
       toast.error(error.message || "Error uploading avatar");
@@ -175,12 +185,12 @@ const UserProfile = () => {
                     {profile.full_name?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
-                <div 
-                  className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer hover:bg-primary/90 transition-colors shadow-sm" 
+                <div
+                  className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer hover:bg-primary/90 transition-colors shadow-sm"
                   title="Change Avatar"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                   {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                 </div>
                 <input
                   type="file"
@@ -195,9 +205,9 @@ const UserProfile = () => {
               <CardDescription>{profile.email}</CardDescription>
             </CardHeader>
             <CardContent>
-               <p className="text-sm text-muted-foreground mb-4">
-                 Manage your personal information and preferences.
-               </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Manage your personal information and preferences.
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -210,25 +220,25 @@ const UserProfile = () => {
               <CardDescription>Update your personal details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              
+
               <div className="space-y-2">
                 <Label>Profile Picture</Label>
                 <div className="flex gap-2 items-center">
-                    <Input 
-                        value={profile.avatar_url} 
-                        onChange={(e) => setProfile({...profile, avatar_url: e.target.value})}
-                        placeholder="https://example.com/avatar.jpg"
-                        className="flex-1"
-                    />
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                    >
-                      {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
-                      Upload
-                    </Button>
+                  <Input
+                    value={profile.avatar_url}
+                    onChange={(e) => setProfile({ ...profile, avatar_url: e.target.value })}
+                    placeholder="https://example.com/avatar.jpg"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                    Upload
+                  </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">Upload an image or paste a direct URL.</p>
               </div>
@@ -238,24 +248,24 @@ const UserProfile = () => {
                   <Label htmlFor="fullName">Full Name</Label>
                   <div className="relative">
                     <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="fullName" 
-                      className="pl-9" 
-                      value={profile.full_name} 
-                      onChange={(e) => setProfile({...profile, full_name: e.target.value})}
+                    <Input
+                      id="fullName"
+                      className="pl-9"
+                      value={profile.full_name}
+                      onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
                   <div className="relative">
                     <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="phone" 
-                      className="pl-9" 
-                      value={profile.phone_number} 
-                      onChange={(e) => setProfile({...profile, phone_number: e.target.value})}
+                    <Input
+                      id="phone"
+                      className="pl-9"
+                      value={profile.phone_number}
+                      onChange={(e) => setProfile({ ...profile, phone_number: e.target.value })}
                       placeholder="+63 900 000 0000"
                     />
                   </div>
@@ -266,11 +276,11 @@ const UserProfile = () => {
                 <Label htmlFor="address">Address</Label>
                 <div className="relative">
                   <MapPin className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Textarea 
-                    id="address" 
-                    className="pl-9 min-h-[80px]" 
-                    value={profile.address} 
-                    onChange={(e) => setProfile({...profile, address: e.target.value})}
+                  <Textarea
+                    id="address"
+                    className="pl-9 min-h-[80px]"
+                    value={profile.address}
+                    onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                     placeholder="123 Tuna St, General Santos City"
                   />
                 </div>
@@ -278,27 +288,27 @@ const UserProfile = () => {
 
               <div className="space-y-4 pt-4 border-t">
                 <h3 className="font-medium flex items-center gap-2">
-                    <Globe className="w-4 h-4" /> Social Media
+                  <Globe className="w-4 h-4" /> Social Media
                 </h3>
                 <div className="grid gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="facebook">Facebook</Label>
-                        <Input 
-                            id="facebook" 
-                            value={profile.social_media_links.facebook} 
-                            onChange={(e) => handleSocialChange('facebook', e.target.value)}
-                            placeholder="facebook.com/username"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="instagram">Instagram</Label>
-                        <Input 
-                            id="instagram" 
-                            value={profile.social_media_links.instagram} 
-                            onChange={(e) => handleSocialChange('instagram', e.target.value)}
-                            placeholder="instagram.com/username"
-                        />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="facebook">Facebook</Label>
+                    <Input
+                      id="facebook"
+                      value={profile.social_media_links.facebook}
+                      onChange={(e) => handleSocialChange('facebook', e.target.value)}
+                      placeholder="facebook.com/username"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="instagram">Instagram</Label>
+                    <Input
+                      id="instagram"
+                      value={profile.social_media_links.instagram}
+                      onChange={(e) => handleSocialChange('instagram', e.target.value)}
+                      placeholder="instagram.com/username"
+                    />
+                  </div>
                 </div>
               </div>
 

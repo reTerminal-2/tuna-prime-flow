@@ -9,6 +9,7 @@ import { Loader2, Sparkles, Box, History } from "lucide-react";
 import { aiService } from "@/services/aiService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { auditService } from "@/services/auditService";
 
 interface AIStockAdjustmentFormProps {
     open: boolean;
@@ -103,6 +104,20 @@ export const AIStockAdjustmentForm: React.FC<AIStockAdjustmentFormProps> = ({ op
                     : (product.current_stock || 0) - qty;
 
                 await supabase.from('products').update({ current_stock: newStock }).eq('id', formData.productId);
+
+                // 3. System Audit Log
+                await auditService.log({
+                    action: 'UPDATE',
+                    entityType: 'stock_adjustment',
+                    entityId: formData.productId,
+                    newValues: {
+                        productId: formData.productId,
+                        type: formData.adjustment_type,
+                        quantity: qty,
+                        reason: formData.reason,
+                        newStock
+                    }
+                });
             }
 
             toast.success("Stock adjusted and logged!");
