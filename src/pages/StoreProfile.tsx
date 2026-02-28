@@ -153,29 +153,34 @@ const StoreProfile = () => {
       {/* Social-style Header */}
       <div className="relative group">
         {/* Cover Photo Backdrop */}
-        <div className="h-56 md:h-96 bg-gradient-to-b from-muted to-muted/50 overflow-hidden relative rounded-b-2xl shadow-sm border-b overflow-hidden">
+        <div
+          className="h-56 md:h-96 bg-gradient-to-b from-muted to-muted/50 overflow-hidden relative rounded-b-2xl shadow-sm border-b cursor-pointer group/cover"
+          onClick={() => coverInputRef.current?.click()}
+        >
           {settings.cover_url ? (
-            <img src={settings.cover_url} alt="Cover" className="w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
+            <img src={settings.cover_url} alt="Cover" className="w-full h-full object-cover transition-transform duration-700 group-hover/cover:scale-105" />
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/30 bg-muted/20">
               <Share2 className="h-24 w-24 mb-2 opacity-10" />
-              <p className="text-sm font-medium opacity-40">No cover photo set</p>
+              <p className="text-sm font-medium opacity-40">Click to add cover photo</p>
             </div>
           )}
 
-          <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+          <div className="absolute inset-0 bg-black/5 opacity-0 group-hover/cover:opacity-100 transition-opacity" />
 
           <Button
             variant="secondary"
             size="sm"
-            className="absolute bottom-4 right-4 gap-2 shadow-xl border border-white/20 backdrop-blur-md bg-white/80 hover:bg-white"
-            onClick={() => coverInputRef.current?.click()}
+            className="absolute bottom-4 right-4 gap-2 shadow-xl border border-white/20 backdrop-blur-md bg-white/80 hover:bg-white z-20"
+            onClick={(e) => {
+              e.stopPropagation();
+              coverInputRef.current?.click();
+            }}
             disabled={uploading === 'cover'}
           >
             {uploading === 'cover' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4 text-primary" />}
             <span className="hidden sm:inline">{settings.cover_url ? "Change Cover" : "Add Cover Photo"}</span>
           </Button>
-          <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'cover')} />
         </div>
 
         {/* Profile Info Overlay */}
@@ -190,13 +195,14 @@ const StoreProfile = () => {
             <Button
               size="icon"
               variant="secondary"
-              className="absolute bottom-2 right-2 rounded-full shadow-lg border-4 border-background h-12 w-12 hover:scale-110 active:scale-95 transition-all bg-primary text-primary-foreground hover:bg-primary/90"
+              className="absolute bottom-2 right-2 rounded-full shadow-lg border-4 border-background h-12 w-12 hover:scale-110 active:scale-95 transition-all bg-primary text-primary-foreground hover:bg-primary/90 z-20"
               onClick={() => profileInputRef.current?.click()}
               disabled={uploading === 'profile'}
             >
               {uploading === 'profile' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
             </Button>
             <input type="file" ref={profileInputRef} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'profile')} />
+            <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'cover')} />
           </div>
 
           <div className="flex-1 text-center md:text-left pt-4 pb-2">
@@ -215,13 +221,6 @@ const StoreProfile = () => {
                 </span>
               )}
             </div>
-          </div>
-
-          <div className="pb-4 self-center md:self-end">
-            <Button onClick={handleSave} disabled={saving} className="shadow-2xl px-10 py-6 h-auto text-lg font-bold rounded-xl transition-all hover:translate-y-[-2px] hover:shadow-primary/20">
-              {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Upload className="mr-2 h-5 w-5" />}
-              Update Brand
-            </Button>
           </div>
         </div>
       </div>
