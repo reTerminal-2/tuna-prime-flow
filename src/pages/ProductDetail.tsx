@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Star, ArrowLeft, Truck, ShieldCheck, Clock, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 interface Product {
   id: string;
@@ -17,6 +18,7 @@ interface Product {
   unit_of_measure: string;
   sku: string;
   image_url: string | null;
+  images: string[] | null;
 }
 
 const ProductDetail = () => {
@@ -24,6 +26,7 @@ const ProductDetail = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -40,7 +43,11 @@ const ProductDetail = () => {
         .single();
 
       if (error) throw error;
-      setProduct(data);
+      const productData: Product = {
+        ...data,
+        images: Array.isArray(data.images) ? (data.images as string[]) : (data.image_url ? [data.image_url] : [])
+      };
+      setProduct(productData);
     } catch (error) {
       console.error("Error fetching product:", error);
     } finally {
@@ -103,18 +110,49 @@ const ProductDetail = () => {
       </Link>
 
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-        {/* Product Image */}
-        <div className="bg-muted rounded-2xl aspect-square flex items-center justify-center overflow-hidden border shadow-inner">
-          {product.image_url ? (
-            <img
-              src={product.image_url}
-              alt={product.name}
-              className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-muted-foreground/20">
-              <ImageIcon className="h-24 w-24" />
-              <span className="text-xs font-bold uppercase tracking-widest mt-4">No Product Image</span>
+        {/* Product Gallery */}
+        <div className="space-y-4">
+          <div className="bg-muted rounded-2xl aspect-square flex items-center justify-center overflow-hidden border shadow-inner relative group">
+            {product.images && product.images.length > 0 ? (
+              <img
+                src={product.images[activeImageIndex]}
+                alt={product.name}
+                className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
+              />
+            ) : product.image_url ? (
+              <img
+                src={product.image_url}
+                alt={product.name}
+                className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-muted-foreground/20">
+                <ImageIcon className="h-24 w-24" />
+                <span className="text-xs font-bold uppercase tracking-widest mt-4">No Product Image</span>
+              </div>
+            )}
+
+            {product.images && product.images.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {product.images.map((_, i) => (
+                  <div key={i} className={cn("h-1.5 rounded-full transition-all", i === activeImageIndex ? "w-6 bg-primary" : "w-1.5 bg-white/50")} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Thumbnails */}
+          {product.images && product.images.length > 1 && (
+            <div className="grid grid-cols-5 gap-3">
+              {product.images.map((url, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveImageIndex(i)}
+                  className={cn("aspect-square rounded-lg overflow-hidden border-2 transition-all", i === activeImageIndex ? "border-primary shadow-sm scale-95" : "border-transparent opacity-70 hover:opacity-100")}
+                >
+                  <img src={url} className="w-full h-full object-cover" alt={`Thumbnail ${i + 1}`} />
+                </button>
+              ))}
             </div>
           )}
         </div>

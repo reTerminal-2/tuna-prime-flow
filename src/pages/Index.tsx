@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Star, Filter, Store, Image as ImageIcon } from "lucide-react";
+import { ShoppingCart, Star, Filter, Store, Image as ImageIcon, LayoutGrid } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -17,6 +17,7 @@ interface Product {
   current_stock: number;
   unit_of_measure: string;
   image_url: string | null;
+  images: string[] | null;
   store?: {
     store_name: string | null;
     profile_url: string | null;
@@ -37,7 +38,7 @@ const Index = () => {
       // 1. Fetch all in-stock products
       const { data: productsData, error: productsError } = await supabase
         .from("products")
-        .select("*, image_url")
+        .select("*, image_url, images")
         .gt("current_stock", 0)
         .order("created_at", { ascending: false });
 
@@ -76,6 +77,7 @@ const Index = () => {
       // 4. Merge data
       const enrichedProducts: Product[] = productsData.map(p => ({
         ...p,
+        images: Array.isArray(p.images) ? (p.images as string[]) : (p.image_url ? [p.image_url] : []),
         store: p.user_id && storeMap[p.user_id] ? storeMap[p.user_id] : null
       }));
 
@@ -174,7 +176,9 @@ const Index = () => {
             <Card key={product.id} className="group overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="p-0 overflow-hidden">
                 <div className="h-48 w-full bg-muted relative group-hover:scale-105 transition-transform duration-500">
-                  {product.image_url ? (
+                  {product.images && product.images.length > 0 ? (
+                    <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                  ) : product.image_url ? (
                     <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/20">
@@ -185,6 +189,12 @@ const Index = () => {
                   <Badge className="absolute top-2 right-2 bg-white/90 text-primary hover:bg-white backdrop-blur-sm border-none shadow-sm capitalize">
                     {product.category}
                   </Badge>
+                  {product.images && product.images.length > 1 && (
+                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm flex items-center gap-1 font-bold">
+                      <LayoutGrid className="h-3 w-3" />
+                      +{product.images.length - 1}
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardHeader className="p-4 pb-2">

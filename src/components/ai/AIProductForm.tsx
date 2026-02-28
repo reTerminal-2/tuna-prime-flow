@@ -112,6 +112,8 @@ export const AIProductForm: React.FC<AIProductFormProps> = ({ open, onOpenChange
         description: formData.description,
         unit_of_measure: formData.unit_of_measure,
         reorder_level: parseInt(formData.reorder_level) || 10,
+        image_url: null,
+        images: [],
         user_id: session.user.id
       };
 
