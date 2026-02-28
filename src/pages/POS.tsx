@@ -116,7 +116,7 @@ export default function POS() {
             setLoading(true);
             const { data, error } = await supabase
                 .from('products')
-                .select('*, image_url')
+                .select('*')
                 .gt('current_stock', 0)
                 .order('name');
 

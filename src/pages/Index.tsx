@@ -38,7 +38,7 @@ const Index = () => {
       // 1. Fetch all in-stock products
       const { data: productsData, error: productsError } = await supabase
         .from("products")
-        .select("*, image_url, images")
+        .select("*")
         .gt("current_stock", 0)
         .order("created_at", { ascending: false });
 
@@ -59,7 +59,7 @@ const Index = () => {
       if (userIds.length > 0) {
         const { data: storeData, error: storeError } = await supabase
           .from("store_settings")
-          .select("user_id, store_name, profile_url")
+          .select("*")
           .in("user_id", userIds);
 
         if (!storeError && storeData) {
