@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { User, MapPin, Phone, Globe, Camera, Loader2, Upload } from "lucide-react";
 
 import { useProfileRedirect } from "@/hooks/useProfileRedirect";
+import { uploadService } from "@/services/uploadService";
 
 const UserProfile = () => {
   const navigate = useNavigate();
@@ -148,16 +149,8 @@ const UserProfile = () => {
 
       setUploading(true);
 
-      // 1. Upload to Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // 2. Get Public URL
-      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      const publicUrl = data.publicUrl;
+      // Use the centralized upload service
+      const publicUrl = await uploadService.uploadImage(file, 'avatars', filePath);
 
       // 3. Persist immediately to Database
       const { error: updateError } = await supabase

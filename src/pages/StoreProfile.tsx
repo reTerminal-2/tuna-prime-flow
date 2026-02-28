@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { uploadService } from "@/services/uploadService";
 
 const StoreProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -91,15 +92,8 @@ const StoreProfile = () => {
       const fileName = `${user.id}-${type}-${Date.now()}.${fileExt}`;
       const filePath = `store-assets/${fileName}`;
 
-      // Upload to 'avatars' bucket (assuming it's the main public bucket)
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      const publicUrl = data.publicUrl;
+      // Use the centralized upload service
+      const publicUrl = await uploadService.uploadImage(file, 'avatars', filePath);
 
       // Update state immediately
       setSettings(prev => ({
