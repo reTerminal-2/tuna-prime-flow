@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { auditService } from "@/services/auditService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { uploadService } from "@/services/uploadService";
+import { Camera, Image as ImageIcon, Loader2, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -41,6 +43,7 @@ interface Product {
   min_order: number;
   expiration_date: string | null;
   description: string | null;
+  image_url?: string | null;
 }
 
 export default function Inventory() {
@@ -73,8 +76,11 @@ export default function Inventory() {
     price: "",
     cost: "",
     stock: "",
-    unit: "kg"
+    unit: "kg",
+    image_url: ""
   });
+
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const fetchProducts = async () => {
     try {
@@ -117,6 +123,7 @@ export default function Inventory() {
         cost_price: parseFloat(newProduct.cost) || 0,
         current_stock: parseFloat(newProduct.stock) || 0,
         unit_of_measure: newProduct.unit,
+        image_url: newProduct.image_url,
         user_id: session.user.id
       });
 
@@ -131,7 +138,7 @@ export default function Inventory() {
 
       toast.success("Product added successfully");
       setIsAddDialogOpen(false);
-      setNewProduct({ name: "", sku: "", category: "fresh", price: "", cost: "", stock: "", unit: "kg" });
+      setNewProduct({ name: "", sku: "", category: "fresh", price: "", cost: "", stock: "", unit: "kg", image_url: "" });
       fetchProducts();
     } catch (err: any) {
       toast.error(err.message || "Failed to add product");
@@ -149,7 +156,9 @@ export default function Inventory() {
         current_stock: selectedProduct.current_stock, // Explicitly allow stock override
         min_order: selectedProduct.min_order,
         cost_price: selectedProduct.cost_price,
-        unit_of_measure: selectedProduct.unit_of_measure
+        unit_of_measure: selectedProduct.unit_of_measure,
+        image_url: selectedProduct.image_url,
+        updated_at: new Date().toISOString()
       }).eq('id', selectedProduct.id);
 
       if (error) throw error;
@@ -251,9 +260,30 @@ export default function Inventory() {
   };
 
   const openStock = (product: Product, type: 'add' | 'remove') => {
-    setSelectedProduct(product);
     setStockAdjustment({ type, quantity: '', reason: '' });
     setIsStockOpen(true);
+  };
+
+  const handleProductImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, isEdit: boolean) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingImage(true);
+      const filePath = `product-images/${Date.now()}-${file.name}`;
+      const publicUrl = await uploadService.uploadImage(file, 'avatars', filePath);
+
+      if (isEdit && selectedProduct) {
+        setSelectedProduct({ ...selectedProduct, image_url: publicUrl });
+      } else {
+        setNewProduct({ ...newProduct, image_url: publicUrl });
+      }
+      toast.success("Image uploaded!");
+    } catch (error: any) {
+      toast.error("Upload failed: " + error.message);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   // Filter Logic
@@ -345,7 +375,16 @@ export default function Inventory() {
                   {filteredProducts.map((product) => (
                     <TableRow key={product.id} className="mobile-table-row relative">
                       <TableCell className="mobile-table-cell font-bold text-lg md:text-base md:font-medium pb-2 border-b md:border-none">
-                        {product.name}
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 border">
+                            <AvatarImage src={product.image_url || ""} />
+                            <AvatarFallback><ImageIcon className="h-4 w-4 opacity-20" /></AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-bold">{product.name}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase">{product.sku}</span>
+                          </div>
+                        </div>
                         <div className="md:hidden">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -483,6 +522,55 @@ export default function Inventory() {
                 <Input value={newProduct.unit} onChange={e => setNewProduct({ ...newProduct, unit: e.target.value })} />
               </div>
             </div>
+
+            <div className="space-y-3 pt-2 border-t mt-2">
+              <Label className="font-bold flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" /> Product Image
+              </Label>
+              <div className="flex items-center gap-4 p-3 border-2 border-dashed rounded-xl bg-muted/30">
+                <div className="relative h-20 w-20 bg-background rounded-lg border overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                  {newProduct.image_url ? (
+                    <img src={newProduct.image_url} className="h-full w-full object-cover" />
+                  ) : (
+                    <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
+                  )}
+                  {uploadingImage && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-white" /></div>}
+                </div>
+                <div className="flex flex-col gap-2 flex-1">
+                  <p className="text-[10px] text-muted-foreground leading-tight">Add a high-quality photo to help your product stand out.</p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-[11px] font-bold"
+                      onClick={() => document.getElementById('product-image-add')?.click()}
+                      disabled={uploadingImage}
+                    >
+                      <Camera className="h-3 w-3 mr-1" /> Browse File
+                    </Button>
+                    {newProduct.image_url && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-[11px] text-red-500 font-bold"
+                        onClick={() => setNewProduct({ ...newProduct, image_url: "" })}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                  <input
+                    id="product-image-add"
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleProductImageUpload(e, false)}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
@@ -535,6 +623,41 @@ export default function Inventory() {
                     type="number"
                     value={selectedProduct.min_order || 1}
                     onChange={e => setSelectedProduct({ ...selectedProduct, min_order: parseFloat(e.target.value) || 1 })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t mt-2">
+                <Label className="font-bold flex items-center gap-2">
+                  <Camera className="h-4 w-4" /> Product Image
+                </Label>
+                <div className="flex items-center gap-4">
+                  <div className="relative h-24 w-24 bg-muted rounded-xl border-2 border-background shadow-lg overflow-hidden flex items-center justify-center shrink-0">
+                    {selectedProduct.image_url ? (
+                      <img src={selectedProduct.image_url} className="h-full w-full object-cover" />
+                    ) : (
+                      <ImageIcon className="h-10 w-10 text-muted-foreground/20" />
+                    )}
+                    {uploadingImage && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-white" /></div>}
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full text-xs font-bold shadow-sm"
+                      onClick={() => document.getElementById('product-image-edit')?.click()}
+                      disabled={uploadingImage}
+                    >
+                      {selectedProduct.image_url ? "Change Image" : "Upload Image"}
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Square images work best. Max 5MB.</p>
+                  </div>
+                  <input
+                    id="product-image-edit"
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleProductImageUpload(e, true)}
                   />
                 </div>
               </div>

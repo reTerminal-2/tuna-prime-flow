@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Star, ArrowLeft, Truck, ShieldCheck, Clock } from "lucide-react";
+import { ShoppingCart, Star, ArrowLeft, Truck, ShieldCheck, Clock, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 
@@ -16,6 +16,7 @@ interface Product {
   current_stock: number;
   unit_of_measure: string;
   sku: string;
+  image_url: string | null;
 }
 
 const ProductDetail = () => {
@@ -103,12 +104,19 @@ const ProductDetail = () => {
 
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
         {/* Product Image */}
-        <div className="bg-muted rounded-2xl aspect-square flex items-center justify-center overflow-hidden">
-          <img 
-            src="/placeholder.svg" 
-            alt={product.name} 
-            className="w-full h-full object-cover"
-          />
+        <div className="bg-muted rounded-2xl aspect-square flex items-center justify-center overflow-hidden border shadow-inner">
+          {product.image_url ? (
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-muted-foreground/20">
+              <ImageIcon className="h-24 w-24" />
+              <span className="text-xs font-bold uppercase tracking-widest mt-4">No Product Image</span>
+            </div>
+          )}
         </div>
 
         {/* Product Info */}
@@ -141,9 +149,9 @@ const ProductDetail = () => {
             <div className="flex items-center gap-4">
               <span className="font-medium">Quantity:</span>
               <div className="flex items-center border rounded-md">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-10 w-10 rounded-none"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={quantity <= 1}
@@ -151,9 +159,9 @@ const ProductDetail = () => {
                   -
                 </Button>
                 <div className="w-12 text-center font-medium">{quantity}</div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-10 w-10 rounded-none"
                   onClick={() => setQuantity(Math.min(product.current_stock, quantity + 1))}
                   disabled={quantity >= product.current_stock}

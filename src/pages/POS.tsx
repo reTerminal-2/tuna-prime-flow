@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
-import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Banknote, Calculator, Sparkles, MessageSquare, PackageOpen, Boxes, UserCircle, Users, Clock, History, MoreVertical, Receipt, XCircle, PauseCircle, Tag, Settings, LogOut, Package, Box } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Banknote, Calculator, Sparkles, MessageSquare, PackageOpen, Boxes, UserCircle, Users, Clock, History, MoreVertical, Receipt, XCircle, PauseCircle, Tag, Settings, LogOut, Package, Box, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { auditService } from "@/services/auditService";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,6 +29,7 @@ interface Product {
     selling_price: number;
     unit_of_measure: string;
     cost_price?: number;
+    image_url?: string | null;
 }
 
 interface CartItem extends Product {
@@ -115,7 +116,7 @@ export default function POS() {
             setLoading(true);
             const { data, error } = await supabase
                 .from('products')
-                .select('*')
+                .select('*, image_url')
                 .gt('current_stock', 0)
                 .order('name');
 
@@ -576,10 +577,17 @@ export default function POS() {
                                     </Button>
                                 </div>
 
-                                <div className="h-24 sm:h-28 bg-muted/40 flex items-center justify-center text-muted-foreground relative">
-                                    <span className="text-4xl font-black opacity-10 select-none">{(product.name || "?").substring(0, 2).toUpperCase()}</span>
+                                <div className="h-24 sm:h-28 bg-muted/40 flex items-center justify-center text-muted-foreground relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
+                                    {product.image_url ? (
+                                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center opacity-20">
+                                            <ImageIcon className="h-10 w-10 mb-1" />
+                                            <span className="text-[8px] font-black uppercase tracking-tighter">{(product.name || "?").substring(0, 2).toUpperCase()}</span>
+                                        </div>
+                                    )}
                                     {(product.current_stock || 0) < 10 && (
-                                        <Badge variant="destructive" className="absolute top-2 left-2 text-[10px] sm:text-xs h-5 px-1.5 animate-pulse border-white/20">LOW STOCK</Badge>
+                                        <Badge variant="destructive" className="absolute top-2 left-2 text-[10px] sm:text-xs h-5 px-1.5 animate-pulse border-white/20 shadow-sm z-10">LOW STOCK</Badge>
                                     )}
                                 </div>
                                 <CardContent className="p-2 sm:p-3 flex flex-col justify-between flex-1">

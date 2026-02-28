@@ -237,6 +237,7 @@ export type Database = {
           description: string | null
           expiration_date: string | null
           id: string
+          image_url: string | null
           name: string
           reorder_level: number | null
           selling_price: number
@@ -254,6 +255,7 @@ export type Database = {
           description?: string | null
           expiration_date?: string | null
           id?: string
+          image_url?: string | null
           name: string
           reorder_level?: number | null
           selling_price: number
@@ -271,6 +273,7 @@ export type Database = {
           description?: string | null
           expiration_date?: string | null
           id?: string
+          image_url?: string | null
           name?: string
           reorder_level?: number | null
           selling_price?: number

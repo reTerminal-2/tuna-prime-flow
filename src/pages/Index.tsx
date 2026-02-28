@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Star, Filter, Store } from "lucide-react";
+import { ShoppingCart, Star, Filter, Store, Image as ImageIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -16,6 +16,7 @@ interface Product {
   selling_price: number;
   current_stock: number;
   unit_of_measure: string;
+  image_url: string | null;
   store?: {
     store_name: string | null;
     profile_url: string | null;
@@ -36,7 +37,7 @@ const Index = () => {
       // 1. Fetch all in-stock products
       const { data: productsData, error: productsError } = await supabase
         .from("products")
-        .select("*")
+        .select("*, image_url")
         .gt("current_stock", 0)
         .order("created_at", { ascending: false });
 
@@ -171,18 +172,21 @@ const Index = () => {
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {filteredProducts.map((product) => (
             <Card key={product.id} className="group overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow">
-              <div className="aspect-square bg-muted relative overflow-hidden">
-                <img
-                  src="/placeholder.svg"
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute top-2 right-2">
-                  <Badge className="bg-white/90 text-black hover:bg-white">
+              <CardHeader className="p-0 overflow-hidden">
+                <div className="h-48 w-full bg-muted relative group-hover:scale-105 transition-transform duration-500">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/20">
+                      <ImageIcon className="h-12 w-12" />
+                      <span className="text-[10px] font-bold uppercase tracking-tighter mt-2">No Image</span>
+                    </div>
+                  )}
+                  <Badge className="absolute top-2 right-2 bg-white/90 text-primary hover:bg-white backdrop-blur-sm border-none shadow-sm capitalize">
                     {product.category}
                   </Badge>
                 </div>
-              </div>
+              </CardHeader>
               <CardHeader className="p-4 pb-2">
                 <div className="flex justify-between items-start">
                   <div>
