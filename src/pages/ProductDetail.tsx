@@ -3,10 +3,11 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Star, ArrowLeft, Truck, ShieldCheck, Clock, Image as ImageIcon } from "lucide-react";
+import { ShoppingCart, Star, ArrowLeft, Truck, ShieldCheck, Clock, Image as ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { getFallbackImage, getMockImagesByCategory } from "@/lib/mockImages";
 
 interface Product {
   id: string;
@@ -43,9 +44,10 @@ const ProductDetail = () => {
         .single();
 
       if (error) throw error;
+      const images = Array.isArray(data.images) ? (data.images as string[]) : (data.image_url ? [data.image_url] : []);
       const productData: Product = {
         ...data,
-        images: Array.isArray(data.images) ? (data.images as string[]) : (data.image_url ? [data.image_url] : [])
+        images: images.length > 0 ? images : getMockImagesByCategory(data.category || "")
       };
       setProduct(productData);
     } catch (error) {
@@ -133,11 +135,25 @@ const ProductDetail = () => {
             )}
 
             {product.images && product.images.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-                {product.images.map((_, i) => (
-                  <div key={i} className={cn("h-1.5 rounded-full transition-all", i === activeImageIndex ? "w-6 bg-primary" : "w-1.5 bg-white/50")} />
-                ))}
-              </div>
+              <>
+                <button
+                  onClick={(e) => { e.preventDefault(); setActiveImageIndex(prev => prev === 0 ? product.images!.length - 1 : prev - 1); }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/40"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={(e) => { e.preventDefault(); setActiveImageIndex(prev => prev === product.images!.length - 1 ? 0 : prev + 1); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/40"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {product.images.map((_, i) => (
+                    <div key={i} className={cn("h-1.5 rounded-full transition-all", i === activeImageIndex ? "w-6 bg-primary" : "w-1.5 bg-white/50")} />
+                  ))}
+                </div>
+              </>
             )}
           </div>
 

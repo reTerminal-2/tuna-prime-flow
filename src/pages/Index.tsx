@@ -7,6 +7,8 @@ import { ShoppingCart, Star, Filter, Store, Image as ImageIcon, LayoutGrid } fro
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { useIsMobileLayout } from "@/hooks/use-layout-mode";
+import { getFallbackImage } from "@/lib/mockImages";
 
 interface Product {
   id: string;
@@ -181,10 +183,7 @@ const Index = () => {
                   ) : product.image_url ? (
                     <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/20">
-                      <ImageIcon className="h-12 w-12" />
-                      <span className="text-[10px] font-bold uppercase tracking-tighter mt-2">No Image</span>
-                    </div>
+                    <img src={getFallbackImage(product.category)} alt={product.name} className="w-full h-full object-cover opacity-80" />
                   )}
                   <Badge className="absolute top-2 right-2 bg-white/90 text-primary hover:bg-white backdrop-blur-sm border-none shadow-sm capitalize">
                     {product.category}

@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { getFallbackImage } from "@/lib/mockImages";
 
 // Lazy load AI service
 const AIProductForm = lazy(() => import("@/components/ai/AIProductForm").then(m => ({ default: m.AIProductForm })));
@@ -469,10 +470,7 @@ function InventoryCard({ product, onEdit, onDelete, onStockUpdate }: { product: 
         {product.images && product.images.length > 0 ? (
           <img src={product.images[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={product.name} />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/30 bg-muted/50">
-            <ImageIcon className="h-12 w-12 mb-2" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">No Photos Found</span>
-          </div>
+          <img src={getFallbackImage(product.category)} className="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-110" alt={product.name} />
         )}
 
         {product.images && product.images.length > 1 && (
@@ -555,7 +553,7 @@ function InventoryTableRow({ product, onEdit, onStockUpdate }: { product: Produc
             {product.images && product.images.length > 0 ? (
               <img src={product.images[0]} className="h-full w-full object-cover" alt={product.name} />
             ) : (
-              <div className="h-full w-full flex items-center justify-center"><ImageIcon className="h-5 w-5 opacity-20" /></div>
+              <img src={getFallbackImage(product.category)} className="h-full w-full object-cover opacity-30" alt={product.name} />
             )}
           </div>
           <div className="flex flex-col">
