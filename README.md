@@ -52,11 +52,17 @@ TunaFlow uses **Supabase** for its PostgreSQL database, Authentication, and Real
 
 ### 2. AI Core Backend (TunaBrain AI)
 The AI engine runs on a dedicated Python service (usually hosted on an Azure VM).
-- **Setup**:
+- **Manual Setup**:
   ```bash
   cd backend
   pip install -r requirements.txt
   python main.py
+  ```
+- **Docker Setup (Recommended for Production)**:
+  ```bash
+  cd backend
+  docker build -t tunaflow-ai-backend .
+  docker run -d -p 6969:6969 tunaflow-ai-backend
   ```
 - **Service Port**: Default is `6969`. Ensure the firewall allows traffic to this port.
 
