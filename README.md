@@ -83,24 +83,26 @@ TunaFlow uses **Supabase (PostgreSQL)** with complex Row Level Security (RLS) to
 
 ---
 
-## 🚀 5. Deployment & Sustainability (Verified)
+---
 
-### 5.1 Infrastructure
-- **Cloud Database**: Supabase (AWS backend) providing 99.9% uptime.
-- **AI Backend**: Python-based AI Core hosted on high-performance Azure VMs.
-- **Frontend Hosting**: Optimized for Netlify (Edge) or InfinityFree (FTP).
+## 🚀 5. Deployment & Technical Guide
 
-### 5.2 Deployment Steps
-1. **Prepare Database**: Execute SQL scripts in `sql_scripts/` (Schema -> Pricing -> RLS).
+For exhaustive, step-by-step instructions on deploying the database, AI core, and frontend, please refer to our dedicated guide:
+
+👉 **[Detailed Deployment & Repository Guide](DEPLOYMENT.md)**
+
+### Quick Summary:
+1. **Prepare Database**: Execute SQL scripts in `sql_scripts/`.
 2. **Launch AI Core**: Initialize the Python backend in the `/backend` directory.
-3. **Build Frontend**: Run `npm run build` and deploy the `dist/` folder via FTP or CI/CD.
+3. **Build Frontend**: Run `npm run build` and deploy the `dist/` folder.
 
 ---
 
-## 📈 6. Future Roadmap
-- **Blockchain Traceability**: Integrating Distributed Ledger Technology (DLT) for immutable catch-documentation.
-- **IoT Integration**: Smart sensors in cold storage to feed real-time temperature data into the AI pricing model.
-- **Mobile Kiosk App**: Native iOS/Android apps for offline-first vendor operations.
+## � Repository References
+All core logic, styles, and configurations are organized logically for research and development:
+- **[DEPLOYMENT.md](DEPLOYMENT.md)**: Full technical setup and directory map.
+- **[RESOURCES.md](RESOURCES.md)**: Hardware/Software specifications for business planning.
+- **[sql_scripts/](sql_scripts/)**: Database migration and schema definitions.
 
 ---
 
