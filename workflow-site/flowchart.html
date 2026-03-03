@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TunaFlow | System Flowchart</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #0A3D62;
+            --accent-blue: #3C6382;
+            --bg-light: #f8fafc;
+            --border-width: 2px;
+            --font-main: 'Inter', sans-serif;
+        }
+
+        body {
+            background: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            padding: 50px;
+            margin: 0;
+            font-family: var(--font-main);
+        }
+
+        .canvas {
+            width: 210mm;
+            height: 297mm;
+            background: white;
+            padding: 40px;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .title {
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.5rem;
+            color: var(--primary-blue);
+            margin-bottom: 50px;
+            border-bottom: 2px solid var(--primary-blue);
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+            position: relative;
+            padding-bottom: 5px;
+        }
+
+        /* Flowchart Shapes */
+        .node {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: var(--border-width) solid var(--primary-blue);
+            background: white;
+            z-index: 2;
+        }
+
+        .start-end {
+            border-radius: 50px;
+            width: 120px;
+            height: 60px;
+        }
+
+        .process {
+            width: 160px;
+            height: 80px;
+        }
+
+        .decision {
+            width: 140px;
+            height: 140px;
+            transform: rotate(45deg);
+            border: var(--border-width) solid var(--primary-blue);
+        }
+
+        .decision span {
+            transform: rotate(-45deg);
+            padding: 10px;
+        }
+
+        .input-output {
+            width: 150px;
+            height: 60px;
+            transform: skew(-20deg);
+        }
+
+        .input-output span {
+            transform: skew(20deg);
+        }
+
+        .database {
+            width: 100px;
+            height: 80px;
+            border-radius: 50% / 20%;
+            background: white;
+            border: var(--border-width) solid var(--accent-blue);
+        }
+
+        .database::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -2px;
+            width: 100px;
+            height: 20px;
+            border: var(--border-width) solid var(--accent-blue);
+            border-radius: 50%;
+            background: white;
+        }
+
+        /* Arrows and Lines */
+        .arrow {
+            position: absolute;
+            background: var(--primary-blue);
+            z-index: 1;
+        }
+
+        .arrow-v {
+            width: 2px;
+        }
+
+        .arrow-h {
+            height: 2px;
+        }
+
+        .arrow-head-d::after {
+            content: '▼';
+            position: absolute;
+            bottom: -8px;
+            left: -6px;
+            font-size: 12px;
+            color: var(--primary-blue);
+        }
+
+        .arrow-head-r::after {
+            content: '▶';
+            position: absolute;
+            top: -6px;
+            right: -8px;
+            font-size: 12px;
+            color: var(--primary-blue);
+        }
+
+        /* Placement */
+        #start {
+            top: 120px;
+            left: 150px;
+        }
+
+        #init {
+            top: 220px;
+            left: 130px;
+        }
+
+        #auth-decision {
+            top: 350px;
+            left: 140px;
+        }
+
+        #login {
+            top: 400px;
+            left: 350px;
+        }
+
+        #signup {
+            top: 580px;
+            left: 135px;
+        }
+
+        #db-inventory {
+            top: 400px;
+            left: 550px;
+        }
+
+        #db-ai {
+            top: 400px;
+            left: 680px;
+        }
+
+        #dashboard {
+            top: 550px;
+            left: 580px;
+            width: 220px;
+        }
+
+        #end {
+            top: 780px;
+            left: 630px;
+        }
+
+        .label {
+            position: absolute;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--primary-blue);
+        }
+
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+            }
+
+            .canvas {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="canvas">
+        <div class="title">TunaFlow: System Operational Flowchart</div>
+
+        <!-- Start Node -->
+        <div class="node start-end" id="start">Start</div>
+        <div class="arrow arrow-v arrow-head-d" style="top: 180px; left: 210px; height: 40px;"></div>
+
+        <!-- Initialization -->
+        <div class="node process" id="init">Initialization<br>(Load TunaFlow Platform)</div>
+        <div class="arrow arrow-v arrow-head-d" style="top: 300px; left: 210px; height: 50px;"></div>
+
+        <!-- Decision: Has Account? -->
+        <div class="node decision" id="auth-decision">
+            <span>Does User Have<br>An Account?</span>
+        </div>
+
+        <!-- Decision Path: Yes -->
+        <div class="arrow arrow-h arrow-head-r" style="top: 420px; left: 280px; width: 70px;"></div>
+        <div class="label" style="top: 400px; left: 300px;">Yes</div>
+
+        <div class="node input-output" id="login"><span>User Log-In<br>Account</span></div>
+        <div class="arrow arrow-h arrow-head-r" style="top: 430px; left: 500px; width: 80px;"></div>
+
+        <!-- Decision Path: No -->
+        <div class="arrow arrow-v arrow-head-d" style="top: 490px; left: 210px; height: 90px;"></div>
+        <div class="label" style="top: 520px; left: 220px;">No</div>
+
+        <div class="node input-output" id="signup"><span>User Sign-Up<br>Account</span></div>
+
+        <!-- Signup path to Dashboard -->
+        <div class="arrow arrow-v" style="top: 640px; left: 210px; height: 110px;"></div>
+        <div class="arrow arrow-h arrow-head-r" style="top: 750px; left: 210px; width: 480px;"></div>
+
+        <!-- Data Stores -->
+        <div class="node database" id="db-inventory"><span>Inventory Data<br>(Supabase)</span></div>
+        <div class="node database" id="db-ai"><span>Pricing Data<br>(TunaBrain AI)</span></div>
+
+        <div class="arrow arrow-v arrow-head-d" style="top: 480px; left: 600px; height: 70px;"></div>
+        <div class="arrow arrow-v arrow-head-d" style="top: 480px; left: 730px; height: 70px;"></div>
+
+        <!-- Dashboard -->
+        <div class="node process" id="dashboard">Proceeds to Main Dashboard<br>(Inventory, POS & Analytics)</div>
+        <div class="arrow arrow-v arrow-head-d" style="top: 630px; left: 690px; height: 150px;"></div>
+
+        <!-- End -->
+        <div class="node start-end" id="end">End</div>
+    </div>
+</body>
+
+</html>

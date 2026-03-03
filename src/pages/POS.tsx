@@ -249,20 +249,7 @@ export default function POS() {
         const timestamp = new Date();
 
         try {
-            // 1. Save to orders table (if it exists)
-            const { data: orderData, error: orderError } = await supabase
-                .from('orders')
-                .insert({
-                    id: orderId,
-                    total_amount: grandTotal,
-                    status: 'completed',
-                    user_id: user?.id || null,
-                    created_at: timestamp.toISOString()
-                })
-                .select()
-                .single();
-
-            // 2. Log individual transactions for each item
+            // 1. Log individual transactions for each item
             const transactionPromises = cart.map(item => {
                 const itemTotal = (item.selling_price * item.qty) * (1 - (item.discount || 0) / 100);
                 const profit = itemTotal - ((item.cost_price || 0) * item.qty);

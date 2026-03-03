@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TunaFlow | Major Start-Up Needs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --title-font: 'Libre+Baskerville', serif;
+            --body-font: 'Inter', sans-serif;
+            --border-color: #333;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            padding: 40px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .document-page {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            padding: 2cm;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            font-family: var(--body-font);
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        .header-section {
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-family: var(--title-font);
+            font-size: 1.4rem;
+            margin: 0 0 10px 0;
+            font-style: italic;
+            font-weight: bold;
+        }
+
+        h3 {
+            font-family: var(--title-font);
+            font-size: 1.1rem;
+            margin: 0 0 10px 0;
+            font-weight: normal;
+        }
+
+        .facilities-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .facilities-table th,
+        .facilities-table td {
+            border-bottom: 1.5px solid #ccc;
+            padding: 20px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .facilities-table th {
+            border-top: 1.5px solid var(--border-color);
+            border-bottom: 1.5px solid var(--border-color);
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .facilities-table tr:last-child td {
+            border-bottom: 2.5px solid var(--border-color);
+        }
+
+        .type-col {
+            width: 30%;
+            font-weight: bold;
+            font-size: 1.05rem;
+            color: #000;
+        }
+
+        .desc-col {
+            width: 70%;
+            font-size: 0.95rem;
+            text-align: justify;
+            color: #333;
+        }
+
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+            }
+
+            .document-page {
+                box-shadow: none;
+                width: auto;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="document-page">
+        <div class="header-section">
+            <h2>2.4. Major Start-Up Needs</h2>
+            <h3>Facilities</h3>
+        </div>
+
+        <p style="font-weight: bold; margin-bottom: 5px;">Table No. 1: Facilities</p>
+        <table class="facilities-table" style="margin-bottom: 40px;">
+            <thead>
+                <tr>
+                    <th class="type-col">Facility Type</th>
+                    <th class="desc-col">Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="type-col">Main Office Space</td>
+                    <td class="desc-col">
+                        A designated workspace where general business development, administrative tasks,
+                        and client consultations are conducted. It provides a professional environment
+                        for the team to manage day-to-day operations.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="type-col">Internet & Storage Area</td>
+                    <td class="desc-col">
+                        A reliable area equipped with stable internet connectivity and secure
+                        storage for managing user accounts and business records. This area ensures
+                        smooth system operation and data safety.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="type-col">Meeting & Training Area</td>
+                    <td class="desc-col">
+                        A shared space for internal team discussions, vendor training sessions,
+                        and presenting the platform to potential partners. It supports collaboration
+                        and professional engagement for all stakeholders.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="header-section" style="margin-top: 40px;">
+            <h3>Operational Equipment</h3>
+        </div>
+
+        <p style="font-weight: bold; margin-bottom: 5px;">Table No. 2: Operational Equipment</p>
+        <table class="facilities-table">
+            <thead>
+                <tr>
+                    <th class="type-col">Equipment</th>
+                    <th class="desc-col">Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="type-col">Standard Laptops/Computers</td>
+                    <td class="desc-col">
+                        Used for general administrative work, managing the online shop inventory,
+                        and basic stock recording. These devices allow the owner to access the
+                        full administrative dashboard for strategic decision-making.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="type-col">Smartphones/Mobile Devices</td>
+                    <td class="desc-col">
+                        Essential handheld devices used by staff and vendors to access the TunaFlow
+                        mobile interface. This ensures real-time sales monitoring and stock updates
+                        can be performed directly from the market stalls.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="type-col">Router & Internet Access</td>
+                    <td class="desc-col">
+                        A stable, high-speed internet subscription and wireless router to maintain
+                        real-time synchronization between the local client devices and the
+                        TunaFlow cloud database (Supabase), ensuring all transactions and
+                        stock updates are processed without delay.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>
