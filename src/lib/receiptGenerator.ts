@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
 interface ReceiptItem {
@@ -75,7 +75,7 @@ export const generateReceiptPDF = (data: ReceiptData) => {
         item.total.toFixed(2)
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
         startY: 55,
         head: [['ITEM', 'QTY', 'PRICE', 'TOTAL']],
         body: tableBody,
