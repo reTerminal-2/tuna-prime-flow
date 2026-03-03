@@ -350,9 +350,9 @@ export default function POS() {
             setIsReceiptOpen(true);
             clearCart();
 
-        } catch (err) {
-            console.error("Checkout error:", err);
-            toast.error("Failed to process order. Please check connection.");
+        } catch (err: any) {
+            console.error("Checkout error details:", err);
+            toast.error(`Order failed: ${err.message || 'Check connection'}`);
         }
     };
 
