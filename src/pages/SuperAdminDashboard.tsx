@@ -639,7 +639,7 @@ export default function SuperAdminDashboard() {
                                         Platform AI Configuration
                                     </CardTitle>
                                     <CardDescription>
-                                        Manage global AI providers, API keys, and VPS endpoints. Changes take effect immediately.
+                                        Manage your ChatGPT Pro Session and high-performance routing. Changes take effect immediately.
                                     </CardDescription>
                                 </div>
                                 <div className="flex gap-2">
@@ -669,31 +669,31 @@ export default function SuperAdminDashboard() {
                                         <Label className="text-sm font-medium">Primary Intelligence Provider</Label>
                                         <Select value={aiProvider} onValueChange={setAiProvider}>
                                             <SelectTrigger className="w-full bg-slate-800">
-                                                <SelectValue placeholder="Select Provider" />
+                                                <SelectValue placeholder="Select Auth Mode" />
                                             </SelectTrigger>
                                             <SelectContent>
+                                                <SelectItem value="pro_no_vps">ChatGPT Pro (Session Token - NO API KEY)</SelectItem>
                                                 <SelectItem value="vps">TunaBrain Pro (Via CUSTOM VPS)</SelectItem>
-                                                <SelectItem value="pro_no_vps">ChatGPT Pro (Standalone - NO VPS NEEDED)</SelectItem>
-                                                <SelectItem value="openai">OpenAI API (Pay-as-you-go)</SelectItem>
+                                                <SelectItem value="openai">OpenAI Legacy (API Key Mode)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <p className="text-[10px] text-muted-foreground">
-                                            {aiProvider === 'vps'
-                                                ? "Unlocking unlimited reasoning via your custom VPS relay."
-                                                : aiProvider === 'pro_no_vps'
-                                                    ? "Directly use your ChatGPT Pro account sessions via our high-speed secure bridge."
-                                                    : "Direct connection to OpenAI servers. Requires an API key."}
+                                            {aiProvider === 'pro_no_vps'
+                                                ? "TunaBrain will use your ChatGPT Pro Account session via our secure Netlify bridge."
+                                                : aiProvider === 'vps'
+                                                    ? "Advanced: Routes traffic through your own private server relay."
+                                                    : "Legacy: Uses standard OpenAI API billing."}
                                         </p>
                                     </div>
 
                                     <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
                                         <Label className="text-sm font-medium">
-                                            {aiProvider === 'vps' ? 'ChatGPT Access/Session Token (Auth)' : 'OpenAI API Key (Secure)'}
+                                            {aiProvider === 'openai' ? 'Legacy OpenAI API Key' : 'ChatGPT Session Token (__Secure-next-auth)'}
                                         </Label>
                                         <div className="relative">
                                             <Input
                                                 type="password"
-                                                placeholder={aiProvider === 'vps' ? "Bearer eyJhbG..." : "sk-..."}
+                                                placeholder={aiProvider === 'openai' ? "sk-..." : "eyJhbG.. (Your browser cookie)"}
                                                 value={openaiKey}
                                                 onChange={(e) => setOpenaiKey(e.target.value)}
                                                 className="bg-muted/30 pr-10"
@@ -703,9 +703,9 @@ export default function SuperAdminDashboard() {
                                             </div>
                                         </div>
                                         <p className="text-[10px] text-muted-foreground">
-                                            {aiProvider === 'vps'
-                                                ? "Enter your ChatGPT Pro session/access token here. It will be used to authenticate with your VPS."
-                                                : "Used by the secure Netlify Edge Function proxy."}
+                                            {aiProvider === 'openai'
+                                                ? "Standard API billing will apply."
+                                                : "Paste your session token here. We use this to bridge your Pro account features to TunaBrain."}
                                         </p>
                                     </div>
 

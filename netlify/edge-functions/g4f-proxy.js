@@ -6,12 +6,14 @@ export default async (request) => {
 
     try {
         const body = await request.json();
+        const authHeader = request.headers.get('Authorization');
 
         const response = await fetch('https://api.g4f.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
+                ...(authHeader ? { 'Authorization': authHeader } : {})
             },
             body: JSON.stringify(body),
         });
