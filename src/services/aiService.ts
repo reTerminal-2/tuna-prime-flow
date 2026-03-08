@@ -374,8 +374,14 @@ ${fewShotBlock}`;
             payload: {
                 model: openaiModel,
                 messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userMessage }
+                    {
+                        role: 'user',
+                        content: `--- TRAIN PROMPT / SYSTEM INSTRUCTIONS ---
+${systemPrompt}
+-------------------------------------------
+
+USER REQUEST: ${userMessage}`
+                    }
                 ]
             }
         };
