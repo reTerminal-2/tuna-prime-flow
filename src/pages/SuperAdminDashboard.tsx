@@ -1,4 +1,5 @@
 
+// Deployment Trigger: 2026-03-08T13:35:00-07:00 (Updated Netlify Secrets)
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
