@@ -364,9 +364,29 @@ ${fewShotBlock}`;
         };
 
         // Determine priority based on provider setting
-        const endpoints = aiProvider === 'vps'
-            ? [vpsEndpoint, openaiEndpoint, pollinationEndpoint]
-            : [openaiEndpoint, vpsEndpoint, pollinationEndpoint];
+        const endpoints = [];
+        const netlifyProEndpoint = {
+            url: '/api/g4f',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(authToken ? { 'Authorization': authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}` } : {})
+            },
+            payload: {
+                model: openaiModel,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userMessage }
+                ]
+            }
+        };
+
+        if (aiProvider === 'pro_no_vps') {
+            endpoints.push(netlifyProEndpoint, pollinationEndpoint);
+        } else if (aiProvider === 'vps') {
+            endpoints.push(vpsEndpoint, openaiEndpoint, pollinationEndpoint);
+        } else {
+            endpoints.push(openaiEndpoint, vpsEndpoint, pollinationEndpoint);
+        }
 
         for (const target of endpoints) {
             try {

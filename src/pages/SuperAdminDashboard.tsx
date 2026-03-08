@@ -672,14 +672,17 @@ export default function SuperAdminDashboard() {
                                                 <SelectValue placeholder="Select Provider" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="vps">TunaBrain Pro (Via VPS/ChatGPT Pro Account)</SelectItem>
+                                                <SelectItem value="vps">TunaBrain Pro (Via CUSTOM VPS)</SelectItem>
+                                                <SelectItem value="pro_no_vps">ChatGPT Pro (Standalone - NO VPS NEEDED)</SelectItem>
                                                 <SelectItem value="openai">OpenAI API (Pay-as-you-go)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <p className="text-[10px] text-muted-foreground">
                                             {aiProvider === 'vps'
-                                                ? "Unlocking unlimited reasoning via your VPS. Uses your ChatGPT Pro session if configured."
-                                                : "Direct connection to OpenAI servers. Requires an API key."}
+                                                ? "Unlocking unlimited reasoning via your custom VPS relay."
+                                                : aiProvider === 'pro_no_vps'
+                                                    ? "Directly use your ChatGPT Pro account sessions via our high-speed secure bridge."
+                                                    : "Direct connection to OpenAI servers. Requires an API key."}
                                         </p>
                                     </div>
 
@@ -706,61 +709,65 @@ export default function SuperAdminDashboard() {
                                         </p>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <Label className="text-sm font-medium">Primary VPS Backend URL</Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                placeholder="http://72.60.232.20:3100"
-                                                value={g4fVmUrl}
-                                                onChange={(e) => setG4fVmUrl(e.target.value)}
-                                                className="bg-muted/30 font-mono text-xs"
-                                            />
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => setG4fVmUrl("http://72.60.232.20:3100")}
-                                                className="text-[10px]"
-                                            >
-                                                Default VPS
-                                            </Button>
-                                        </div>
-                                        <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="g4fModel">OpenAI Model</Label>
-                                                <Select value={g4fModel} onValueChange={setG4fModel}>
-                                                    <SelectTrigger id="g4fModel" className="w-full bg-slate-800">
-                                                        <SelectValue placeholder="Select an OpenAI Model" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="gpt-5-nano">TunaBrain GPT (Ultra-Private GPT-5)</SelectItem>
-                                                        <SelectItem value="gpt-5-preview">GPT-5 Preview (Experimental)</SelectItem>
-                                                        <SelectItem value="o1">OpenAI o1 (Advanced Reasoning)</SelectItem>
-                                                        <SelectItem value="o1-mini">o1-mini (Fast Reasoning)</SelectItem>
-                                                        <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
-                                                        <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fast & Cost-Effective)</SelectItem>
-                                                        <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                                                        <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <p className="text-xs text-slate-400">
-                                                    Select the specific OpenAI model TunaBrain should use.
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="systemPrompt">Master AI Persona & Instructions (TunaBrain Elite)</Label>
-                                                <Textarea
-                                                    id="systemPrompt"
-                                                    placeholder="You are TunaBrain, a proprietary system built for TunaFlow..."
-                                                    value={systemPrompt}
-                                                    onChange={(e) => setSystemPrompt(e.target.value)}
-                                                    className="bg-muted/30 min-h-[150px] text-xs font-mono"
+                                    {aiProvider === 'vps' && (
+                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                                            <Label className="text-sm font-medium">Primary VPS Backend URL</Label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    placeholder="http://72.60.232.20:3100"
+                                                    value={g4fVmUrl}
+                                                    onChange={(e) => setG4fVmUrl(e.target.value)}
+                                                    className="bg-muted/30 font-mono text-xs"
                                                 />
-                                                <p className="text-[10px] text-muted-foreground">
-                                                    This prompt defines TunaBrain's personality and rules. It's the "trained prompt" applied to all requests.
-                                                </p>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setG4fVmUrl("http://72.60.232.20:3100")}
+                                                    className="text-[10px]"
+                                                >
+                                                    Default VPS
+                                                </Button>
                                             </div>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-2 pt-4 border-t border-gray-700/50">
+                                        <Label htmlFor="g4fModel">OpenAI Model</Label>
+                                        <Select value={g4fModel} onValueChange={setG4fModel}>
+                                            <SelectTrigger id="g4fModel" className="w-full bg-slate-800">
+                                                <SelectValue placeholder="Select an OpenAI Model" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="gpt-5-nano">TunaBrain GPT (Ultra-Private GPT-5)</SelectItem>
+                                                <SelectItem value="gpt-5-preview">GPT-5 Preview (Experimental)</SelectItem>
+                                                <SelectItem value="o1">OpenAI o1 (Advanced Reasoning)</SelectItem>
+                                                <SelectItem value="o1-mini">o1-mini (Fast Reasoning)</SelectItem>
+                                                <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
+                                                <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fast & Cost-Effective)</SelectItem>
+                                                <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+                                                <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-xs text-slate-400">
+                                            Select the specific OpenAI model TunaBrain should use.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="systemPrompt">Master AI Persona & Instructions (TunaBrain Elite)</Label>
+                                            <Textarea
+                                                id="systemPrompt"
+                                                placeholder="You are TunaBrain, a proprietary system built for TunaFlow..."
+                                                value={systemPrompt}
+                                                onChange={(e) => setSystemPrompt(e.target.value)}
+                                                className="bg-muted/30 min-h-[150px] text-xs font-mono"
+                                            />
+                                            <p className="text-[10px] text-muted-foreground">
+                                                This prompt defines TunaBrain's personality and rules. It's the "trained prompt" applied to all requests.
+                                            </p>
                                         </div>
 
                                         <div className="bg-muted/20 rounded-xl p-5 border border-border/50">
