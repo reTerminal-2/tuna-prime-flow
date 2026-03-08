@@ -301,14 +301,18 @@ ${fewShotBlock}`;
         // Fetch dynamic settings from DB first
         let vpsUrl = 'http://72.60.232.20:3100';
         let openaiModel = 'gpt-4o-mini';
+        let aiProvider = 'openai'; // default
         try {
             const { data } = await supabase.from('system_configs' as any).select('config_key, config_value');
             if (data) {
                 const configs = data as any[];
                 const vpsSetting = configs.find(c => c.config_key === 'vps_url');
                 const modelSetting = configs.find(c => c.config_key === 'openai_model');
+                const providerSetting = configs.find(c => c.config_key === 'ai_provider');
+
                 if (vpsSetting?.config_value) vpsUrl = vpsSetting.config_value;
                 if (modelSetting?.config_value) openaiModel = modelSetting.config_value;
+                if (providerSetting?.config_value) aiProvider = providerSetting.config_value;
             }
         } catch (e) {
             console.warn('[TunaBrain] Failed to fetch dynamic settings, using defaults.', e);
@@ -316,41 +320,44 @@ ${fewShotBlock}`;
 
         const { systemPrompt, userMessage } = await aiService.generateChatPayload(message, context);
 
-        const endpoints = [
-            // Netlify Edge Function — Primary (Official OpenAI)
-            {
-                url: '/api/openai',
-                payload: {
-                    model: openaiModel,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userMessage }
-                    ]
-                }
-            },
-            // VPS Relay — Fallback 1 (Dynamic)
-            {
-                url: vpsUrl.endsWith('/chat') ? vpsUrl : `${vpsUrl}/chat`,
-                payload: {
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userMessage }
-                    ]
-                }
-            },
-            // Pollinations Direct — Fallback 2
-            {
-                url: 'https://text.pollinations.ai/openai',
-                payload: {
-                    model: 'openai',
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userMessage }
-                    ],
-                    seed: 42
-                }
+        const openaiEndpoint = {
+            url: '/api/openai',
+            payload: {
+                model: openaiModel,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userMessage }
+                ]
             }
-        ];
+        };
+
+        const vpsEndpoint = {
+            url: vpsUrl.endsWith('/chat') ? vpsUrl : `${vpsUrl}/chat`,
+            payload: {
+                model: openaiModel === 'gpt-5-nano' ? 'gpt-4' : openaiModel, // Map nano to gpt-4 on VPS
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userMessage }
+                ]
+            }
+        };
+
+        const pollinationEndpoint = {
+            url: 'https://text.pollinations.ai/openai',
+            payload: {
+                model: 'openai',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userMessage }
+                ],
+                seed: 42
+            }
+        };
+
+        // Determine priority based on provider setting
+        const endpoints = aiProvider === 'vps'
+            ? [vpsEndpoint, openaiEndpoint, pollinationEndpoint]
+            : [openaiEndpoint, vpsEndpoint, pollinationEndpoint];
 
         for (const target of endpoints) {
             try {

@@ -103,11 +103,13 @@ export default function SuperAdminDashboard() {
                 const vpsConfig = (configs as any[]).find(c => c.config_key === 'vps_url');
                 const promptConfig = (configs as any[]).find(c => c.config_key === 'system_prompt');
                 const modelConfig = (configs as any[]).find(c => c.config_key === 'openai_model');
+                const providerConfig = (configs as any[]).find(c => c.config_key === 'ai_provider');
 
                 if (openaiConfig) setOpenaiKey(openaiConfig.config_value);
                 if (vpsConfig) setG4fVmUrl(vpsConfig.config_value);
                 if (promptConfig) setSystemPrompt(promptConfig.config_value);
                 if (modelConfig) setG4fModel(modelConfig.config_value);
+                if (providerConfig) setAiProvider(providerConfig.config_value);
             }
         } catch (error) {
             console.error('Error loading AI settings from DB:', error);
@@ -205,7 +207,8 @@ export default function SuperAdminDashboard() {
                 { config_key: 'openai_api_key', config_value: openaiKey, updated_at: new Date().toISOString() },
                 { config_key: 'vps_url', config_value: g4fVmUrl, updated_at: new Date().toISOString() },
                 { config_key: 'system_prompt', config_value: systemPrompt, updated_at: new Date().toISOString() },
-                { config_key: 'openai_model', config_value: g4fModel, updated_at: new Date().toISOString() }
+                { config_key: 'openai_model', config_value: g4fModel, updated_at: new Date().toISOString() },
+                { config_key: 'ai_provider', config_value: aiProvider, updated_at: new Date().toISOString() }
             ];
 
             const { error } = await supabase
@@ -663,23 +666,43 @@ export default function SuperAdminDashboard() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium">OpenAI API Key (Secure)</Label>
-                                        <div className="relative">
-                                            <Input
-                                                type="password"
-                                                placeholder="sk-..."
-                                                value={openaiKey}
-                                                onChange={(e) => setOpenaiKey(e.target.value)}
-                                                className="bg-muted/30 pr-10"
-                                            />
-                                            <div className="absolute right-3 top-2.5">
-                                                <Zap className={`w-4 h-4 ${openaiKey ? 'text-yellow-500' : 'text-muted-foreground'}`} />
-                                            </div>
-                                        </div>
+                                        <Label className="text-sm font-medium">Primary Intelligence Provider</Label>
+                                        <Select value={aiProvider} onValueChange={setAiProvider}>
+                                            <SelectTrigger className="w-full bg-slate-800">
+                                                <SelectValue placeholder="Select Provider" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="vps">TunaBrain Pro (Via VPS/ChatGPT Pro Account)</SelectItem>
+                                                <SelectItem value="openai">OpenAI API (Pay-as-you-go)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         <p className="text-[10px] text-muted-foreground">
-                                            Used by the secure Netlify Edge Function proxy.
+                                            {aiProvider === 'vps'
+                                                ? "Unlocking unlimited reasoning via your VPS. Uses your ChatGPT Pro session if configured."
+                                                : "Direct connection to OpenAI servers. Requires an API key."}
                                         </p>
                                     </div>
+
+                                    {aiProvider === 'openai' && (
+                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                                            <Label className="text-sm font-medium">OpenAI API Key (Secure)</Label>
+                                            <div className="relative">
+                                                <Input
+                                                    type="password"
+                                                    placeholder="sk-..."
+                                                    value={openaiKey}
+                                                    onChange={(e) => setOpenaiKey(e.target.value)}
+                                                    className="bg-muted/30 pr-10"
+                                                />
+                                                <div className="absolute right-3 top-2.5">
+                                                    <Zap className={`w-4 h-4 ${openaiKey ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                                                </div>
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">
+                                                Used by the secure Netlify Edge Function proxy.
+                                            </p>
+                                        </div>
+                                    )}
 
                                     <div className="space-y-2">
                                         <Label className="text-sm font-medium">Primary VPS Backend URL</Label>
@@ -707,6 +730,7 @@ export default function SuperAdminDashboard() {
                                                         <SelectValue placeholder="Select an OpenAI Model" />
                                                     </SelectTrigger>
                                                     <SelectContent>
+                                                        <SelectItem value="gpt-5-nano">TunaBrain GPT (Ultra-Private GPT-5)</SelectItem>
                                                         <SelectItem value="gpt-5-preview">GPT-5 Preview (Experimental)</SelectItem>
                                                         <SelectItem value="o1">OpenAI o1 (Advanced Reasoning)</SelectItem>
                                                         <SelectItem value="o1-mini">o1-mini (Fast Reasoning)</SelectItem>
