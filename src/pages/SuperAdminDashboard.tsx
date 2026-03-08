@@ -707,6 +707,9 @@ export default function SuperAdminDashboard() {
                                                         <SelectValue placeholder="Select an OpenAI Model" />
                                                     </SelectTrigger>
                                                     <SelectContent>
+                                                        <SelectItem value="gpt-5-preview">GPT-5 Preview (Experimental)</SelectItem>
+                                                        <SelectItem value="o1">OpenAI o1 (Advanced Reasoning)</SelectItem>
+                                                        <SelectItem value="o1-mini">o1-mini (Fast Reasoning)</SelectItem>
                                                         <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
                                                         <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fast & Cost-Effective)</SelectItem>
                                                         <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
