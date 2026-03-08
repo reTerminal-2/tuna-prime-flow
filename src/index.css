@@ -154,4 +154,52 @@
   .mobile-table-cell-label {
     @apply md:hidden font-semibold text-muted-foreground mr-2;
   }
+
+  /* --- Rich Text & AI Chat Formatting --- */
+  .prose-chat {
+    @apply max-w-none text-inherit leading-relaxed;
+  }
+
+  .prose-chat p {
+    @apply my-2 first:mt-0 last:mb-0;
+  }
+
+  .prose-chat b,
+  .prose-chat strong {
+    @apply font-bold text-primary;
+  }
+
+  .prose-chat table {
+    @apply w-full border-collapse my-4 rounded-xl overflow-hidden border border-border/50 shadow-sm bg-background/50;
+  }
+
+  .prose-chat th {
+    @apply bg-muted/80 text-foreground px-4 py-2.5 text-left text-[10px] md:text-xs font-bold uppercase tracking-wider border-b border-border;
+  }
+
+  .prose-chat td {
+    @apply px-4 py-2.5 text-[10px] md:text-xs border-b border-border/30 text-muted-foreground;
+  }
+
+  .prose-chat tr:last-child td {
+    @apply border-0;
+  }
+
+  .prose-chat ul {
+    @apply list-disc ml-5 my-2 space-y-1;
+  }
+
+  .prose-chat ol {
+    @apply list-decimal ml-5 my-2 space-y-1;
+  }
+
+  .prose-chat code {
+    @apply bg-muted px-1.5 py-0.5 rounded text-[10px] md:text-xs font-mono text-primary;
+  }
+
+  .prose-chat.user-message b,
+  .prose-chat.user-message strong,
+  .prose-chat.user-message code {
+    @apply text-white font-black;
+  }
 }

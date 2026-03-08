@@ -25,6 +25,8 @@ import {
   ThumbsDown
 } from "lucide-react";
 import { useAI } from "@/contexts/AIContext";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { AIProductForm } from "@/components/ai/AIProductForm";
 import { AIPricingRuleForm } from "@/components/ai/AIPricingRuleForm";
@@ -312,7 +314,11 @@ const AIManager = () => {
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted border border-border'
                           }`}>
-                          <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+                          <div className={`prose-chat ${msg.role === 'user' ? 'user-message' : ''}`}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {msg.content}
+                            </ReactMarkdown>
+                          </div>
 
                           {/* Feedback Buttons for AI messages */}
                           {msg.role === 'assistant' && msg.id !== 'init' && (
