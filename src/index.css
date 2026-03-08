@@ -170,15 +170,17 @@
   }
 
   .prose-chat table {
-    @apply w-full border-collapse my-4 rounded-xl overflow-hidden border border-border/50 shadow-sm bg-background/50;
+    @apply block w-full overflow-x-auto border-collapse my-4 rounded-xl border border-border/50 shadow-sm bg-background/50;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
   }
 
   .prose-chat th {
-    @apply bg-muted/80 text-foreground px-4 py-2.5 text-left text-[10px] md:text-xs font-bold uppercase tracking-wider border-b border-border;
+    @apply bg-muted/80 text-foreground px-4 py-2.5 text-left text-[10px] md:text-xs font-bold uppercase tracking-wider border-b border-border whitespace-nowrap;
   }
 
   .prose-chat td {
-    @apply px-4 py-2.5 text-[10px] md:text-xs border-b border-border/30 text-muted-foreground;
+    @apply px-4 py-2.5 text-[10px] md:text-xs border-b border-border/30 text-muted-foreground min-w-[120px];
   }
 
   .prose-chat tr:last-child td {
