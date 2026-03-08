@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { StatCard } from "@/components/superadmin/StatCard";
 import { ActivityItem } from "@/components/superadmin/ActivityItem";
@@ -750,11 +751,13 @@ export default function SuperAdminDashboard() {
                                             </div>
                                         </div>
                                     </div>
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                        </div>
                 </div>
             </div>
-            );
+        </div>
+    );
 }
