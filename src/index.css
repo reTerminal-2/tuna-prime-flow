@@ -97,6 +97,20 @@
     @apply bg-background text-foreground tracking-tight antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+  }
 }
 
 @layer utilities {
