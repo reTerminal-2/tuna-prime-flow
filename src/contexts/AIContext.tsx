@@ -24,7 +24,7 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [healthScore, setHealthScore] = useState<any>(null);
   const [actionPlan, setActionPlan] = useState<string[]>([]);
-  const [contextData, setContextData] = useState<{ products: any[], orders: any[], customers: any[] }>({ products: [], orders: [], customers: [] });
+  const [contextData, setContextData] = useState<{ products: any[], orders: any[], customers: any[], recentLogs: any[], recentTransactions: any[] }>({ products: [], orders: [], customers: [], recentLogs: [], recentTransactions: [] });
 
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
@@ -87,12 +87,22 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchDashboardData = async () => {
     try {
-      const { data: products } = await supabase.from('products').select('*');
-      const { data: orders } = await supabase.from('orders').select('*');
-      const { data: customers } = await supabase.from('profiles').select('*');
+      const { data: products } = await supabase.from('products' as any).select('*');
+      const { data: orders } = await supabase.from('orders' as any).select('*');
+      const { data: customers } = await supabase.from('profiles' as any).select('*');
+
+      // Fetch recent memory context
+      const { data: recentLogs } = await supabase.from('audit_logs' as any).select('*').order('created_at', { ascending: false }).limit(10);
+      const { data: recentTransactions } = await supabase.from('transactions' as any).select('*, products(name)').order('transaction_date', { ascending: false }).limit(10);
 
       if (products && orders) {
-        setContextData({ products, orders, customers: customers || [] });
+        setContextData({
+          products,
+          orders,
+          customers: customers || [],
+          recentLogs: recentLogs || [],
+          recentTransactions: recentTransactions || []
+        });
         const health = await aiService.generateBusinessHealthScore(products, orders);
         setHealthScore(health);
       }
@@ -107,14 +117,14 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
   const fetchChatSessions = async () => {
     try {
       const { data: sessions, error } = await supabase
-        .from('chat_history')
+        .from('chat_history' as any)
         .select('session_id, created_at, content')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       const uniqueSessions = new Map();
-      sessions?.forEach(msg => {
+      (sessions as any[])?.forEach(msg => {
         if (!uniqueSessions.has(msg.session_id)) {
           uniqueSessions.set(msg.session_id, {
             id: msg.session_id,
@@ -196,7 +206,7 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
     setIsLoadingHistory(true);
     try {
       const { data, error } = await supabase
-        .from('chat_history')
+        .from('chat_history' as any)
         .select('*')
         .eq('session_id', sessionId)
         .order('timestamp', { ascending: true });
@@ -204,7 +214,7 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        const formattedMessages: ChatMessage[] = data.map(msg => ({
+        const formattedMessages: ChatMessage[] = (data as any[]).map(msg => ({
           id: msg.id,
           role: msg.role as 'user' | 'assistant',
           content: msg.content,

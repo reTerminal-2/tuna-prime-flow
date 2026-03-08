@@ -537,6 +537,32 @@ export type Database = {
         }
         Relationships: []
       }
+      system_configs: {
+        Row: {
+          id: string
+          config_key: string
+          config_value: string
+          description: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          config_key: string
+          config_value: string
+          description?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          config_key?: string
+          config_value?: string
+          description?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

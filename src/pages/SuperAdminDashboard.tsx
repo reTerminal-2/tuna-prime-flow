@@ -61,8 +61,8 @@ export default function SuperAdminDashboard() {
     const [aiProvider, setAiProvider] = useState<string>('gpt4free');
     const [g4fModel, setG4fModel] = useState('gpt-4o-mini');
     const [g4fVmUrl, setG4fVmUrl] = useState('');
-    const [geminiKey, setGeminiKey] = useState("");
-    const [hfToken, setHfToken] = useState("");
+    const [openaiKey, setOpenaiKey] = useState("");
+    const [systemPrompt, setSystemPrompt] = useState("");
     const [testingAI, setTestingAI] = useState(false);
     const [savingAI, setSavingAI] = useState(false);
 
@@ -84,15 +84,36 @@ export default function SuperAdminDashboard() {
             setFeatureToggles(JSON.parse(savedToggles));
         }
 
-        // Load AI Settings
-        setAiProvider(localStorage.getItem("ai_provider") || 'gpt4free');
-        setG4fModel(localStorage.getItem("g4f_model") || 'gpt-4o-mini');
-        setG4fVmUrl(localStorage.getItem("g4f_vm_url") || "http://72.60.232.20:1337");
-        setGeminiKey(localStorage.getItem("gemini_api_key") || "");
-        setHfToken(localStorage.getItem("hf_token") || "");
-
         loadDashboardData();
+        loadAISettings();
     }, [navigate]);
+
+    const loadAISettings = async () => {
+        try {
+            const { data: configs, error } = await supabase
+                .from('system_configs' as any)
+                .select('*');
+
+            if (error) throw error;
+
+            if (configs) {
+                const openaiConfig = (configs as any[]).find(c => c.config_key === 'openai_api_key');
+                const vpsConfig = (configs as any[]).find(c => c.config_key === 'vps_url');
+                const promptConfig = (configs as any[]).find(c => c.config_key === 'system_prompt');
+                const modelConfig = (configs as any[]).find(c => c.config_key === 'openai_model');
+
+                if (openaiConfig) setOpenaiKey(openaiConfig.config_value);
+                if (vpsConfig) setG4fVmUrl(vpsConfig.config_value);
+                if (promptConfig) setSystemPrompt(promptConfig.config_value);
+                if (modelConfig) setG4fModel(modelConfig.config_value);
+            }
+        } catch (error) {
+            console.error('Error loading AI settings from DB:', error);
+            // Fallback to localStorage just in case table isn't ready
+            setG4fVmUrl(localStorage.getItem("g4f_vm_url") || "http://72.60.232.20:3100");
+            setG4fModel(localStorage.getItem("g4f_model") || "gpt-4o-mini");
+        }
+    };
 
     const loadDashboardData = async () => {
         setLoading(true);
@@ -174,26 +195,33 @@ export default function SuperAdminDashboard() {
         toast.success(`${key} ${value ? 'enabled' : 'disabled'}`);
     };
 
-    const handleAISave = () => {
+    const handleAISave = async () => {
         setSavingAI(true);
         try {
-            localStorage.setItem("ai_provider", aiProvider);
-            localStorage.setItem("g4f_model", g4fModel);
-            localStorage.setItem("gemini_api_key", geminiKey);
-            localStorage.setItem("hf_token", hfToken);
-            if (g4fVmUrl) {
-                // Ensure URL has protocol
-                const formattedUrl = g4fVmUrl.startsWith('http') ? g4fVmUrl : `http://${g4fVmUrl}`;
-                localStorage.setItem("g4f_vm_url", formattedUrl);
-            } else {
-                localStorage.removeItem("g4f_vm_url");
-            }
+            // Save to database
+            const updates = [
+                { config_key: 'openai_api_key', config_value: openaiKey, updated_at: new Date().toISOString() },
+                { config_key: 'vps_url', config_value: g4fVmUrl, updated_at: new Date().toISOString() },
+                { config_key: 'system_prompt', config_value: systemPrompt, updated_at: new Date().toISOString() },
+                { config_key: 'openai_model', config_value: g4fModel, updated_at: new Date().toISOString() }
+            ];
+
+            const { error } = await supabase
+                .from('system_configs' as any)
+                .upsert(updates, { onConflict: 'config_key' });
+
+            if (error) throw error;
+
+            // Also keep in localStorage for immediate sync without reload
+            localStorage.setItem("g4f_vm_url", g4fVmUrl);
+            localStorage.setItem("openai_api_key", openaiKey);
 
             // Dispatch event to update other components
             window.dispatchEvent(new Event("settingsChanged"));
-            toast.success("AI Configuration updated for all users");
-        } catch (e) {
-            toast.error("Failed to save AI settings");
+            toast.success("AI Configuration saved to system database");
+        } catch (e: any) {
+            console.error(e);
+            toast.error("Failed to save AI settings: " + e.message);
         } finally {
             setSavingAI(false);
         }
@@ -202,11 +230,6 @@ export default function SuperAdminDashboard() {
     const handleAITest = async () => {
         setTestingAI(true);
         try {
-            // Save current state first to ensure test uses current inputs
-            localStorage.setItem("ai_provider", aiProvider);
-            localStorage.setItem("g4f_model", g4fModel);
-            localStorage.setItem("gemini_api_key", geminiKey);
-
             const result = await aiService.testConnection({});
             if (result.success) {
                 toast.success(result.message);
@@ -601,17 +624,17 @@ export default function SuperAdminDashboard() {
                         </CardContent>
                     </Card>
 
-                    {/* AI Configuration - LOCKED TO VPS */}
+                    {/* AI Configuration - DYNAMIC */}
                     <Card className="bg-card border-border lg:col-span-3 mt-6">
                         <CardHeader className="border-b border-border/50">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
                                     <CardTitle className="flex items-center gap-2 text-primary">
                                         <BrainCircuit className="w-6 h-6" />
-                                        Platform AI Configuration (Locked)
+                                        Platform AI Configuration
                                     </CardTitle>
                                     <CardDescription>
-                                        The system is permanently locked to the GPT4Free VPS instance at 72.60.232.20.
+                                        Manage global AI providers, API keys, and VPS endpoints. Changes take effect immediately.
                                     </CardDescription>
                                 </div>
                                 <div className="flex gap-2">
@@ -638,38 +661,29 @@ export default function SuperAdminDashboard() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium">Locked AI Provider</Label>
-                                        <div className="p-3 bg-muted/30 rounded-lg border border-border flex items-center justify-between">
-                                            <span className="text-sm font-semibold">🆓 GPT4Free (Self-Hosted VPS)</span>
-                                            <ShieldCheck className="w-4 h-4 text-green-500" />
+                                        <Label className="text-sm font-medium">OpenAI API Key (Secure)</Label>
+                                        <div className="relative">
+                                            <Input
+                                                type="password"
+                                                placeholder="sk-..."
+                                                value={openaiKey}
+                                                onChange={(e) => setOpenaiKey(e.target.value)}
+                                                className="bg-muted/30 pr-10"
+                                            />
+                                            <div className="absolute right-3 top-2.5">
+                                                <Zap className={`w-4 h-4 ${openaiKey ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                                            </div>
                                         </div>
-                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                            <Globe className="w-3 h-3" />
-                                            Other providers have been disabled for security and performance.
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Used by the secure Netlify Edge Function proxy.
                                         </p>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium">G4F Model Selection</Label>
-                                        <Select value={g4fModel} onValueChange={setG4fModel}>
-                                            <SelectTrigger className="bg-muted/30">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fastest)</SelectItem>
-                                                <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
-                                                <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
-                                                <SelectItem value="llama-3-70b">Llama 3 70B</SelectItem>
-                                                <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label className="text-sm font-medium">VPS Backend URL</Label>
+                                        <Label className="text-sm font-medium">Primary VPS Backend URL</Label>
                                         <div className="flex gap-2">
                                             <Input
-                                                placeholder="http://72.60.232.20:1337"
+                                                placeholder="http://72.60.232.20:3100"
                                                 value={g4fVmUrl}
                                                 onChange={(e) => setG4fVmUrl(e.target.value)}
                                                 className="bg-muted/30 font-mono text-xs"
@@ -677,38 +691,70 @@ export default function SuperAdminDashboard() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => setG4fVmUrl("http://72.60.232.20:1337")}
+                                                onClick={() => setG4fVmUrl("http://72.60.232.20:3100")}
                                                 className="text-[10px]"
                                             >
-                                                Reset to VPS
+                                                Default VPS
                                             </Button>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-muted/20 rounded-xl p-5 border border-border/50">
-                                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                                        <Terminal className="w-4 h-4 text-primary" />
-                                        System Status
-                                    </h4>
-                                    <div className="space-y-4 text-xs text-muted-foreground">
-                                        <div className="p-3 bg-green-500/10 rounded border border-green-500/20 text-green-500 font-mono">
-                                            Endpoint Ready: 72.60.232.20:1337
+                                        <div className="space-y-4 pt-4 border-t border-gray-700/50">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="g4fModel">OpenAI Model</Label>
+                                                <Select value={g4fModel} onValueChange={setG4fModel}>
+                                                    <SelectTrigger id="g4fModel" className="w-full bg-slate-800">
+                                                        <SelectValue placeholder="Select an OpenAI Model" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
+                                                        <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fast & Cost-Effective)</SelectItem>
+                                                        <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+                                                        <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <p className="text-xs text-slate-400">
+                                                    Select the specific OpenAI model TunaBrain should use.
+                                                </p>
+                                            </div>
                                         </div>
-                                        <p>
-                                            <strong className="text-foreground">Exclusive Access:</strong> This installation is configured to ONLY use your private VPS. This ensures maximum privacy and avoids 3rd-party API quotas.
-                                        </p>
-                                        <p>
-                                            <strong className="text-foreground">Self-Correction:</strong> If the connection fails, the system will automatically attempt to reconnect to the Docker container on your Ubuntu server.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                        <div className="space-y-4 pt-4 border-t border-gray-700/50">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="systemPrompt">Master AI Persona & Instructions (TunaBrain Elite)</Label>
+                                                <Textarea
+                                                    id="systemPrompt"
+                                                    placeholder="You are TunaBrain, a proprietary system built for TunaFlow..."
+                                                    value={systemPrompt}
+                                                    onChange={(e) => setSystemPrompt(e.target.value)}
+                                                    className="bg-muted/30 min-h-[150px] text-xs font-mono"
+                                                />
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    This prompt defines TunaBrain's personality and rules. It's the "trained prompt" applied to all requests.
+                                                </p>
+                                            </div>
+                                        </div>
 
+                                        <div className="bg-muted/20 rounded-xl p-5 border border-border/50">
+                                            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                                                <Terminal className="w-4 h-4 text-primary" />
+                                                System Connectivity
+                                            </h4>
+                                            <div className="space-y-4 text-xs text-muted-foreground">
+                                                <div className={`p-3 rounded border font-mono ${systemHealth.aiCore === 'online' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                                                    Status: {systemHealth.aiCore === 'online' ? 'Online' : 'Offline/Checking...'}
+                                                </div>
+                                                <p>
+                                                    <strong className="text-foreground">Dynamic Switching:</strong> Settings saved here are stored in Supabase and used across all TunaFlow instances. The API uses a multi-layered fallback system.
+                                                </p>
+                                                <p>
+                                                    <strong className="text-foreground">Security:</strong> Sensitive keys are protected by Row Level Security and are only accessible by users with administrative privileges.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                        </div>
                 </div>
             </div>
-        </div>
-    );
+            );
 }

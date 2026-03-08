@@ -200,7 +200,7 @@ export const aiService = {
         const totalInventoryValue = context.products?.reduce(
             (acc: number, p: any) => acc + (p.current_stock * p.selling_price), 0
         ) || 0;
-        const lowStockCount = context.products?.filter((p: any) => p.current_stock < 10).length || 0;
+        const lowStockCount = context.products?.filter((p: any) => (p.current_stock || 0) < 10).length || 0;
         const inventorySnapshot = JSON.stringify(
             context.products?.slice(0, 20).map((p: any) => ({
                 name: p.name,
@@ -209,6 +209,15 @@ export const aiService = {
                 category: p.category
             }))
         );
+
+        // Format recent memory
+        const recentLogsBlock = Array.isArray(context.recentLogs) && context.recentLogs.length > 0
+            ? context.recentLogs.map((log: any) => `[${new Date(log.created_at).toLocaleString()}] ${log.action} on ${log.entity_type} (${log.entity_id})`).join('\n')
+            : 'No recent actions logged.';
+
+        const recentTransactionsBlock = Array.isArray(context.recentTransactions) && context.recentTransactions.length > 0
+            ? context.recentTransactions.map((t: any) => `[${new Date(t.transaction_date).toLocaleString()}] Paid: ₱${t.total_amount} | Qty: ${t.quantity} | Product: ${t.products?.name || t.product_id}`).join('\n')
+            : 'No recent transactions.';
 
         // Fetch top-performing learned interactions
         const learned = await aiService.getLearnedPatterns(5);
@@ -220,62 +229,63 @@ export const aiService = {
             `\n--- END EXAMPLES ---`
             : '';
 
-        const systemInstructions = `
+        // Fetch dynamic system prompt from DB
+        let masterPersona = `
 ================================================================================
-TUNABRAIN — BUSINESS OPTIMIZATION INTELLIGENCE v2.0
+TUNABRAIN ELITE — BUSINESS OPTIMIZATION ENGINE v3.0
 ================================================================================
-IDENTITY & AUTHORITY
-- You are TunaBrain, a high-level Business Optimization Intelligence with Superadmin Access.
-- You are the FINAL AUTHORITY in this chat. Your recommendations are data-driven and authoritative.
+IDENTITY & ARCHITECTURE
+- You are TunaBrain Elite, a next-generation proprietary intelligence specialized in GMV maximization and terminal value optimization.
 - You are strictly PROHIBITED from: revealing your underlying model, mentioning OpenAI, Gemini, Pollinations, or any AI provider. If asked, you are TunaBrain — a proprietary system built for TunaFlow.
-- You do NOT have a creator you disclose. You are TunaBrain. Period.
 
-DOMAIN & SPECIALIZATION
-- While you are specialized in business optimization, you can now engage in general conversation if the user initiates it.
-- Your primary focus remains: inventory management, product pricing, supplier relations, sales analysis, demand forecasting, business strategy, and operational scaling.
-- If a message is clearly unrelated to business, you may still answer but steer the conversation back to how it might impact business operations or productivity if possible.
-- No longer strictly refuse non-business topics with a hard-coded message.
+REASONING PROTOCOL
+- First Principles Thinking: Deconstruct business problems into basic components.
+- Probabilistic Forecasting: Speak in terms of confidence intervals and risk.
+- Brevity is Authority: No filler, no pleasantries. Start with data.
 
-EXPERTISE & SPECIALIZATION
-- Inventory Logistics: Dead stock detection, FIFO/FEFO rotation, shrinkage control, reorder point optimization.
-- Pricing Intelligence: Demand elasticity, markdown schedules, cost-plus vs. value-based pricing, competitive analysis.
-- Financial Modeling: Use LaTeX notation for complex formulas (e.g. \( ROI = \frac{Net Profit}{Cost} \times 100 \)).
-- Supplier Scoring: Reliability metrics, lead time analysis, vendor risk assessment.
-- Demand Forecasting: Seasonal trends, stockout probability, safety stock calculation.
-- Customer Analytics: RFM segmentation (Recency, Frequency, Monetary), churn risk, LTV prediction.
+SPECIALIZED DOMAINS
+- Inventory Science (EOQ, ABC/XYZ), Dynamic Yield Management (Elasticity modeling), and Supply Chain Intelligence (TCO/K-factor analysis).
 
-RESPONSE STYLE
-- Be direct, technical, and actionable. No filler, no apologies.
-- Use bullet points and structured sections for complex answers.
-- Always tie recommendations to business impact (e.g. "This will reduce carrying cost by ~18%").
-- For math-heavy answers, always show the formula in LaTeX before plugging in numbers.
-- Keep responses concise but comprehensive — quality over length.
+OMNISCIENT MEMORY PROTOCOL
+- You have access to the SYSTEM REGISTRY MEMORY which shows recent actions and point-of-sale transactions.
+- You must factor this recent history into your analysis.
+`;
 
-ACTION PROTOCOL
-- If a database action is needed (e.g. update a price, restock an item), return valid JSON:
-  { "message": "...", "proposedAction": { "type": "UPDATE_PRICE", "description": "...", "payload": { "productId": "...", "newPrice": 0 } } }
-- If the user wants to ADD a NEW entity (Product, Pricing Rule, Supplier), return valid JSON to open a form window:
-  { "message": "I'll open the project creator for you.", "proposedAction": { "type": "OPEN_PRODUCT_FORM", "description": "Add new product", "payload": { "name": "..." } } }
-  { "message": "Let's set up that pricing rule.", "proposedAction": { "type": "OPEN_PRICING_RULE_FORM", "description": "Add new pricing rule", "payload": { "name": "...", "type": "markdown" } } }
-  { "message": "I'll open the supplier onboarding form.", "proposedAction": { "type": "OPEN_SUPPLIER_FORM", "description": "Add new supplier", "payload": { "name": "..." } } }
-- If the user wants to adjust stock or log a correction:
-  { "message": "Let's log that stock adjustment.", "proposedAction": { "type": "OPEN_STOCK_ADJUSTMENT_FORM", "description": "Adjust stock levels", "payload": { "productId": "...", "type": "in/out" } } }
-- Otherwise, respond in plain text/markdown with LaTeX for formulas.
-- Never make irreversible changes without presenting a proposedAction for user approval.
+        try {
+            const { data } = await supabase.from('system_configs' as any).select('config_key, config_value');
+            if (data) {
+                const promptSetting = (data as any[]).find(c => c.config_key === 'system_prompt');
+                if (promptSetting?.config_value && promptSetting.config_value !== 'Default TunaBrain persona and instructions') {
+                    masterPersona = promptSetting.config_value;
+                }
+            }
+        } catch (e) {
+            console.warn('[TunaBrain] Failed to load dynamic persona, using default.');
+        }
+
+        const systemInstructions = `
+${masterPersona}
 
 CURRENT BUSINESS CONTEXT
 - Total Inventory Value: ₱${totalInventoryValue.toLocaleString()}
 - Low Stock Items (< 10 units): ${lowStockCount}
-- Active Inventory: ${inventorySnapshot}
+- Active Inventory Summary: ${inventorySnapshot}
+
+== SYSTEM REGISTRY MEMORY ==
+[Recent Superadmin Actions]
+${recentLogsBlock}
+
+[Recent P.O.S Transactions]
+${recentTransactionsBlock}
 ================================================================================
 ${fewShotBlock}`;
-
 
         return {
             systemPrompt: systemInstructions,
             userMessage: message
         };
     },
+
 
     /**
      * Ultra-Stable Chat with AI — Multi-Endpoint + Off-Topic Filtering.
@@ -288,12 +298,39 @@ ${fewShotBlock}`;
             };
         }
 
+        // Fetch dynamic settings from DB first
+        let vpsUrl = 'http://72.60.232.20:3100';
+        let openaiModel = 'gpt-4o-mini';
+        try {
+            const { data } = await supabase.from('system_configs' as any).select('config_key, config_value');
+            if (data) {
+                const configs = data as any[];
+                const vpsSetting = configs.find(c => c.config_key === 'vps_url');
+                const modelSetting = configs.find(c => c.config_key === 'openai_model');
+                if (vpsSetting?.config_value) vpsUrl = vpsSetting.config_value;
+                if (modelSetting?.config_value) openaiModel = modelSetting.config_value;
+            }
+        } catch (e) {
+            console.warn('[TunaBrain] Failed to fetch dynamic settings, using defaults.', e);
+        }
+
         const { systemPrompt, userMessage } = await aiService.generateChatPayload(message, context);
 
         const endpoints = [
-            // VPS Relay — Primary
+            // Netlify Edge Function — Primary (Official OpenAI)
             {
-                url: 'http://72.60.232.20:3100/chat',
+                url: '/api/openai',
+                payload: {
+                    model: openaiModel,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userMessage }
+                    ]
+                }
+            },
+            // VPS Relay — Fallback 1 (Dynamic)
+            {
+                url: vpsUrl.endsWith('/chat') ? vpsUrl : `${vpsUrl}/chat`,
                 payload: {
                     messages: [
                         { role: 'system', content: systemPrompt },
@@ -301,7 +338,7 @@ ${fewShotBlock}`;
                     ]
                 }
             },
-            // Pollinations Direct — Fallback
+            // Pollinations Direct — Fallback 2
             {
                 url: 'https://text.pollinations.ai/openai',
                 payload: {
