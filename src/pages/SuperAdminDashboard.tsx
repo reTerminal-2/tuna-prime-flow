@@ -683,26 +683,28 @@ export default function SuperAdminDashboard() {
                                         </p>
                                     </div>
 
-                                    {aiProvider === 'openai' && (
-                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                                            <Label className="text-sm font-medium">OpenAI API Key (Secure)</Label>
-                                            <div className="relative">
-                                                <Input
-                                                    type="password"
-                                                    placeholder="sk-..."
-                                                    value={openaiKey}
-                                                    onChange={(e) => setOpenaiKey(e.target.value)}
-                                                    className="bg-muted/30 pr-10"
-                                                />
-                                                <div className="absolute right-3 top-2.5">
-                                                    <Zap className={`w-4 h-4 ${openaiKey ? 'text-yellow-500' : 'text-muted-foreground'}`} />
-                                                </div>
+                                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                                        <Label className="text-sm font-medium">
+                                            {aiProvider === 'vps' ? 'ChatGPT Access/Session Token (Auth)' : 'OpenAI API Key (Secure)'}
+                                        </Label>
+                                        <div className="relative">
+                                            <Input
+                                                type="password"
+                                                placeholder={aiProvider === 'vps' ? "Bearer eyJhbG..." : "sk-..."}
+                                                value={openaiKey}
+                                                onChange={(e) => setOpenaiKey(e.target.value)}
+                                                className="bg-muted/30 pr-10"
+                                            />
+                                            <div className="absolute right-3 top-2.5">
+                                                <Zap className={`w-4 h-4 ${openaiKey ? 'text-yellow-500' : 'text-muted-foreground'}`} />
                                             </div>
-                                            <p className="text-[10px] text-muted-foreground">
-                                                Used by the secure Netlify Edge Function proxy.
-                                            </p>
                                         </div>
-                                    )}
+                                        <p className="text-[10px] text-muted-foreground">
+                                            {aiProvider === 'vps'
+                                                ? "Enter your ChatGPT Pro session/access token here. It will be used to authenticate with your VPS."
+                                                : "Used by the secure Netlify Edge Function proxy."}
+                                        </p>
+                                    </div>
 
                                     <div className="space-y-2">
                                         <Label className="text-sm font-medium">Primary VPS Backend URL</Label>

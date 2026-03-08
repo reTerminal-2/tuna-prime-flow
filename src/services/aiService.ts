@@ -302,6 +302,7 @@ ${fewShotBlock}`;
         let vpsUrl = 'http://72.60.232.20:3100';
         let openaiModel = 'gpt-4o-mini';
         let aiProvider = 'openai'; // default
+        let authToken = '';
         try {
             const { data } = await supabase.from('system_configs' as any).select('config_key, config_value');
             if (data) {
@@ -309,10 +310,12 @@ ${fewShotBlock}`;
                 const vpsSetting = configs.find(c => c.config_key === 'vps_url');
                 const modelSetting = configs.find(c => c.config_key === 'openai_model');
                 const providerSetting = configs.find(c => c.config_key === 'ai_provider');
+                const authSetting = configs.find(c => c.config_key === 'openai_api_key');
 
                 if (vpsSetting?.config_value) vpsUrl = vpsSetting.config_value;
                 if (modelSetting?.config_value) openaiModel = modelSetting.config_value;
                 if (providerSetting?.config_value) aiProvider = providerSetting.config_value;
+                if (authSetting?.config_value) authToken = authSetting.config_value;
             }
         } catch (e) {
             console.warn('[TunaBrain] Failed to fetch dynamic settings, using defaults.', e);
@@ -322,6 +325,7 @@ ${fewShotBlock}`;
 
         const openaiEndpoint = {
             url: '/api/openai',
+            headers: { 'Content-Type': 'application/json' },
             payload: {
                 model: openaiModel,
                 messages: [
@@ -333,6 +337,10 @@ ${fewShotBlock}`;
 
         const vpsEndpoint = {
             url: vpsUrl.endsWith('/chat') ? vpsUrl : `${vpsUrl}/chat`,
+            headers: {
+                'Content-Type': 'application/json',
+                ...(authToken ? { 'Authorization': authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}` } : {})
+            },
             payload: {
                 model: openaiModel === 'gpt-5-nano' ? 'gpt-4' : openaiModel, // Map nano to gpt-4 on VPS
                 messages: [
@@ -344,6 +352,7 @@ ${fewShotBlock}`;
 
         const pollinationEndpoint = {
             url: 'https://text.pollinations.ai/openai',
+            headers: { 'Content-Type': 'application/json' },
             payload: {
                 model: 'openai',
                 messages: [
@@ -366,7 +375,7 @@ ${fewShotBlock}`;
 
                 const res = await fetch(target.url, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: (target as any).headers || { 'Content-Type': 'application/json' },
                     body: JSON.stringify(target.payload),
                     signal: controller.signal
                 });
