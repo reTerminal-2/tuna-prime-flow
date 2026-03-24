@@ -94,11 +94,18 @@ const Auth = () => {
           if (returnUrl) {
             navigate(returnUrl, { replace: true });
           } else {
-            // Smart Redirect: Check if seller
-            const role = session.user.user_metadata?.role;
+            // Smart Redirect: Check metadata first
+            const userMetadata = session.user.user_metadata;
+            const role = userMetadata?.role;
+            
+            console.log('Redirect check - role:', role);
+            
             if (role === 'admin') {
               navigate("/seller/dashboard", { replace: true });
+            } else if (role === 'user') {
+              navigate("/", { replace: true });
             } else {
+              // Fallback for existing users without metadata role: check if they have a store
               supabase
                 .from("store_settings")
                 .select("id")
