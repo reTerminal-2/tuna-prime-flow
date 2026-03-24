@@ -252,6 +252,7 @@ const Auth = () => {
       setIsLoading(false);
 
     } catch (error: any) {
+      console.error("DEBUG - Signup Error:", error);
       const errorMsg = error.message || "Signup failed";
 
       // Provide user-friendly error messages
@@ -262,7 +263,7 @@ const Auth = () => {
       } else if (errorMsg.includes("Password")) {
         toast.error("Password must be at least 6 characters long.");
       } else {
-        toast.error("Unable to create account. Please try again or contact support.");
+        toast.error(`Unable to create account: ${errorMsg}`);
       }
       setIsLoading(false);
     }
