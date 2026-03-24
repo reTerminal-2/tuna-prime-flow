@@ -287,16 +287,25 @@ const Auth = () => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/update-password`,
+        captchaToken: captchaToken || undefined,
       });
+
 
       if (error) throw error;
 
       toast.success("Password reset link sent! Check your email.");
       setIsResetOpen(false);
       setResetEmail("");
+      setCaptchaToken(null);
     } catch (error: any) {
-      toast.error(error.message || "Failed to send reset email");
+      const errorMsg = error.message || "Failed to send reset email";
+      if (errorMsg.includes("captcha")) {
+        toast.error("Please complete the security check.");
+      } else {
+        toast.error(errorMsg);
+      }
     } finally {
+
       setResetLoading(false);
     }
   };
@@ -564,7 +573,19 @@ const Auth = () => {
                 required
               />
             </div>
+
+            <div className="flex justify-center py-2">
+              <Turnstile
+                sitekey="0x4AAAAAACvhHWZo5qKieKm-"
+                onVerify={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+                onError={() => setCaptchaToken(null)}
+                theme="light"
+              />
+            </div>
+
             <Button type="submit" className="w-full" disabled={resetLoading}>
+
               {resetLoading ? "Sending Link..." : "Send Reset Link"}
             </Button>
           </form>
