@@ -42,10 +42,12 @@ serve(async (req) => {
     // Prepare line items for Payrex
     const line_items = items.map((item: any) => ({
       name: item.name,
-      amount: Math.round(item.price * 100), // Payrex expects amounts in cents typically
+      // Handle both 'price' (generic) and 'selling_price' (from our specific cart schema)
+      amount: Math.round((item.selling_price || item.price || 0) * 100), 
       currency: 'PHP',
       quantity: item.quantity,
     }))
+
 
     // Call Payrex API
     const payrexReq = await fetch('https://api.payrex.com.ph/v1/checkout/sessions', {
