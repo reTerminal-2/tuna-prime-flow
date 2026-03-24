@@ -1,0 +1,1 @@
+/usr/bin/which: no node in (/home/chrl/.local/bin:/home/chrl/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin)

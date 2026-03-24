@@ -128,6 +128,33 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          id: string
+          sender_id: string
+          receiver_id: string
+          content: string
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sender_id: string
+          receiver_id: string
+          content: string
+          read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          sender_id?: string
+          receiver_id?: string
+          content?: string
+          read?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
       pricing_logs: {
 
         Row: {

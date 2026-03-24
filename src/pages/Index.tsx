@@ -12,6 +12,7 @@ import { getFallbackImage, getMockImagesByCategory } from "@/lib/mockImages";
 import { QuickViewDialog } from "@/components/marketplace/QuickViewDialog";
 import { Eye, ShoppingCart as CartIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ChatBox } from "@/components/chat/ChatBox";
 
 interface Product {
   id: string;
@@ -303,6 +304,9 @@ const Index = () => {
         onClose={() => setIsQuickViewOpen(false)}
         onAddToCart={handleAddToCart}
       />
+      
+      {/* Customer-Seller Chatbox */}
+      <ChatBox />
     </div>
   );
 };

@@ -1,0 +1,3 @@
+/usr/bin/which: no docker in (/home/chrl/.local/bin:/home/chrl/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin)
+/usr/bin/which: no pnpm in (/home/chrl/.local/bin:/home/chrl/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin)
+/usr/bin/which: no yarn in (/home/chrl/.local/bin:/home/chrl/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin)
