@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { UserCircle } from "lucide-react";
+
 
 interface CartItem {
   id: string;
@@ -23,6 +25,9 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [shippingAddress, setShippingAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "payrex">("payrex");
+  const [profile, setProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,12 +36,43 @@ const Checkout = () => {
 
     if (savedCart.length === 0) {
       navigate("/cart");
+      return;
     }
+
+    fetchProfile();
   }, [navigate]);
+
+  const fetchProfile = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (data) {
+        setProfile(data);
+        if (data.address) setShippingAddress(data.address);
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const isProfileComplete = profile && profile.full_name && profile.phone_number && profile.address;
 
   const calculateTotal = () => {
     return cart.reduce((total, item) => total + (item.selling_price * item.quantity), 0);
   };
+
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,8 +207,48 @@ const Checkout = () => {
     }
   };
 
+  if (profileLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isProfileComplete) {
+    return (
+      <div className="container mx-auto px-4 py-16 flex justify-center">
+        <Card className="max-w-md w-full text-center p-6 border-red-100 shadow-xl shadow-red-500/5">
+          <CardHeader>
+            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <UserCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <CardTitle className="text-xl">Profile Incomplete</CardTitle>
+            <CardDescription className="text-md mt-2">
+              To complete your purchase, you must first set up your profile details (Full Name, Phone Number, and Address).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              These details are required so sellers can contact you and ship your tuna safely.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-3">
+            <Button className="w-full" onClick={() => navigate("/profile")}>
+              Set Up My Profile
+            </Button>
+            <Button variant="ghost" onClick={() => navigate("/cart")}>
+              Back to Cart
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
+
       <h1 className="text-2xl font-bold mb-8">Checkout</h1>
 
       <div className="grid md:grid-cols-2 gap-8">

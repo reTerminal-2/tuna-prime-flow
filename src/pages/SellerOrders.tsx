@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Eye, Truck, CheckCircle, XCircle, Sparkles, ShieldCheck, AlertTriangle, Search, Filter, MoreHorizontal, Calendar, Package } from "lucide-react";
+import { Eye, Truck, CheckCircle, XCircle, Sparkles, ShieldCheck, AlertTriangle, Search, Filter, MoreHorizontal, Calendar, Package, Phone, MapPin } from "lucide-react";
+
 import { toast } from "sonner";
 import {
   Dialog,
@@ -36,6 +37,8 @@ interface Order {
   profiles: {
     full_name: string;
     email: string;
+    phone_number: string;
+    address: string;
   };
   order_items: {
     id: string;
@@ -111,8 +114,11 @@ const SellerOrders = () => {
           *,
           profiles:user_id (
             full_name,
-            email
+            email,
+            phone_number,
+            address
           ),
+
           order_items (
             id,
             quantity,
@@ -418,14 +424,20 @@ const OrderDetailsDialog = ({ order, risk, onUpdateStatus, trigger }: { order: O
                 <div>
                   <p className="font-medium">{order.profiles?.full_name}</p>
                   <p className="text-sm text-muted-foreground">{order.profiles?.email}</p>
+                  <div className="flex items-center gap-1.5 mt-2 text-xs text-primary font-medium">
+                    <Phone className="h-3 w-3" />
+                    {order.profiles?.phone_number || "No phone provided"}
+                  </div>
                 </div>
               </div>
             </div>
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Shipping</h3>
-              <div className="flex items-start gap-2">
-                <Truck className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <p className="text-sm text-foreground/80 leading-relaxed">{order.shipping_address}</p>
+              <div className="flex items-start gap-2 bg-background/50 p-2 rounded-lg border border-border/30">
+                <MapPin className="h-4 w-4 text-primary mt-0.5" />
+                <p className="text-sm text-foreground/80 leading-relaxed font-medium">
+                  {order.profiles?.address || order.shipping_address}
+                </p>
               </div>
             </div>
           </div>
