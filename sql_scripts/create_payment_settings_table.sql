@@ -18,6 +18,12 @@ CREATE TABLE IF NOT EXISTS seller_payment_settings (
 ALTER TABLE seller_payment_settings ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DO $$ BEGIN
+    DROP POLICY IF EXISTS "Users can view their own payment settings" ON seller_payment_settings;
+    DROP POLICY IF EXISTS "Users can insert their own payment settings" ON seller_payment_settings;
+    DROP POLICY IF EXISTS "Users can update their own payment settings" ON seller_payment_settings;
+END $$;
+
 CREATE POLICY "Users can view their own payment settings"
   ON seller_payment_settings
   FOR SELECT
@@ -32,3 +38,4 @@ CREATE POLICY "Users can update their own payment settings"
   ON seller_payment_settings
   FOR UPDATE
   USING (auth.uid() = user_id);
+
