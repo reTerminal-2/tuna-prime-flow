@@ -29,6 +29,7 @@ const ShippingSettings = lazy(() => import("./pages/ShippingSettings"));
 const PaymentSettings = lazy(() => import("./pages/PaymentSettings"));
 const StoreProfile = lazy(() => import("./pages/StoreProfile"));
 const SellerOrders = lazy(() => import("./pages/SellerOrders"));
+const SellerMessages = lazy(() => import("./pages/SellerMessages"));
 const Customers = lazy(() => import("./pages/Customers"));
 const AIManager = lazy(() => import("./pages/AIManager"));
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
@@ -106,6 +107,7 @@ const App = () => (
                   <Route path="/seller" element={<Navigate to="/seller/dashboard" replace />} />
                   <Route path="/seller/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
                   <Route path="/seller/pos" element={<MainLayout><POS /></MainLayout>} />
+                  <Route path="/seller/messages" element={<MainLayout><SellerMessages /></MainLayout>} />
                   <Route path="/seller/ai" element={<MainLayout><AIManager /></MainLayout>} />
                   <Route path="/seller/orders" element={<MainLayout><SellerOrders /></MainLayout>} />
                   <Route path="/seller/inventory" element={<MainLayout><Inventory /></MainLayout>} />
@@ -124,6 +126,7 @@ const App = () => (
                   </Route>
                   <Route path="/mobile/auth" element={<Auth />} />
                   <Route path="/mobile/seller/dashboard" element={<MobileLayout><Dashboard /></MobileLayout>} />
+                  <Route path="/mobile/seller/messages" element={<MobileLayout><SellerMessages /></MobileLayout>} />
                   <Route path="/mobile/seller/pos" element={<MobileLayout><POS /></MobileLayout>} />
                   <Route path="/mobile/seller/ai" element={<MobileLayout><AIManager /></MobileLayout>} />
                   <Route path="/mobile/seller/orders" element={<MobileLayout><SellerOrders /></MobileLayout>} />

@@ -22,8 +22,10 @@ import {
   Calculator,
   Search,
   Bell,
+  MessageSquare,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useSellerChat } from "@/hooks/useSellerChat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -54,6 +56,7 @@ import {
 const navItems = [
   { title: "Dashboard", url: "/seller/dashboard", icon: LayoutDashboard },
   { title: "Point of Sale", url: "/seller/pos", icon: Calculator },
+  { title: "Messages", url: "/seller/messages", icon: MessageSquare },
   { title: "AI Manager", url: "/seller/ai", icon: BrainCircuit },
   { title: "Orders", url: "/seller/orders", icon: ShoppingCart },
   { title: "Inventory", url: "/seller/inventory", icon: Package },
@@ -76,6 +79,15 @@ const AppSidebar = () => {
   const currentPath = location.pathname;
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [user, setUser] = useState<{ id: string } | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+  }, []);
+
+  const { totalUnreadCount } = useSellerChat(user?.id);
 
   const handleLogoutClick = () => {
     setShowLogoutDialog(true);
@@ -137,10 +149,17 @@ const AppSidebar = () => {
                     >
                       <NavLink
                         to={item.url}
-                        className="flex items-center gap-3 px-3 py-2"
+                        className="flex items-center justify-between w-full px-3 py-2"
                       >
-                        <item.icon className="h-4 w-4" />
-                        <span className="font-medium">{item.title}</span>
+                        <div className="flex items-center gap-3">
+                          <item.icon className="h-4 w-4" />
+                          <span className="font-medium">{item.title}</span>
+                        </div>
+                        {item.title === 'Messages' && totalUnreadCount > 0 && (
+                          <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                          </span>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

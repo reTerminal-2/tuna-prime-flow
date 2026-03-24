@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect, useRef } from "react";
 import { NavLink as RouterNavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, Calculator, Menu, Search, Bell, X, Store, Package, Users, BarChart3, Settings, LogOut, Truck, CreditCard, BrainCircuit, UserCircle, PhilippinePeso, Fish } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Calculator, Menu, Search, Bell, X, Store, Package, Users, BarChart3, Settings, LogOut, Truck, CreditCard, BrainCircuit, UserCircle, PhilippinePeso, Fish, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
+import { useSellerChat } from "@/hooks/useSellerChat";
 
 interface MobileLayoutProps {
     children: ReactNode;
@@ -21,6 +22,8 @@ const MobileLayout = ({ children }: MobileLayoutProps) => {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const hasNavigatedRef = useRef(false);
+
+    const { totalUnreadCount } = useSellerChat(user?.id);
 
     // Authentication Logic (Parity with MainLayout)
     useEffect(() => {
@@ -85,6 +88,7 @@ const MobileLayout = ({ children }: MobileLayoutProps) => {
     ];
 
     const menuItems = [
+        { title: "Messages", url: "/mobile/seller/messages", icon: MessageSquare },
         { title: "AI Manager", url: "/mobile/seller/ai", icon: BrainCircuit },
         { title: "Pricing", url: "/mobile/seller/pricing", icon: PhilippinePeso },
         { title: "Customers", url: "/mobile/seller/customers", icon: UserCircle },
@@ -176,6 +180,12 @@ const MobileLayout = ({ children }: MobileLayoutProps) => {
                             <div className={`relative ${isMenuPage ? '-translate-y-1' : ''} transition-transform duration-300`}>
                                 <Menu className="h-6 w-6" strokeWidth={isMenuPage ? 2.5 : 2} />
                                 {isMenuPage && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-1 w-1 bg-primary rounded-full"></div>}
+                                {totalUnreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-destructive border-2 border-background"></span>
+                                    </span>
+                                )}
                             </div>
                             <span className="text-[10px] font-medium">Menu</span>
                         </button>
@@ -199,10 +209,15 @@ const MobileLayout = ({ children }: MobileLayoutProps) => {
                                             to={item.url}
                                             className={`flex flex-col items-center gap-2 group`}
                                         >
-                                            <div className={`h-14 w-14 rounded-2xl flex items-center justify-center transition-colors duration-200
+                                            <div className={`relative h-14 w-14 rounded-2xl flex items-center justify-center transition-colors duration-200
                               ${isActive ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'}
                             `}>
                                                 <item.icon className="h-6 w-6" />
+                                                {item.title === 'Messages' && totalUnreadCount > 0 && (
+                                                    <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-background shadow-sm">
+                                                        {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                                                    </span>
+                                                )}
                                             </div>
                                             <span className={`text-xs text-center font-medium leading-tight max-w-[64px] ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>{item.title}</span>
                                         </RouterNavLink>
