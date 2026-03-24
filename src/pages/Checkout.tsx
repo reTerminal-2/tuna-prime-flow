@@ -22,6 +22,7 @@ const Checkout = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [shippingAddress, setShippingAddress] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "payrex">("payrex");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,7 +65,7 @@ const Checkout = () => {
           total_amount: calculateTotal(),
           status: "pending",
           shipping_address: shippingAddress,
-          payment_status: "pending" // In a real app, integrate Stripe/PayPal here
+          payment_status: paymentMethod === "payrex" ? "pending_payment" : "pending"
         })
         .select()
         .single();
@@ -114,10 +115,52 @@ const Checkout = () => {
         }
       }
 
-      // Success
+      // Handle Payrex Redirection (Online Payment via GCash/Card)
+      if (paymentMethod === "payrex" && cart.length > 0) {
+        // Fetch seller details from the first product
+        const { data: productData } = await supabase
+          .from('products')
+          .select('user_id')
+          .eq('id', cart[0].id)
+          .single();
+          
+        const sellerId = productData?.user_id;
+
+        if (sellerId) {
+          toast.info("Redirecting to secure payment gateway (GCash / Card)...");
+          
+          const { data: edgeData, error: edgeError } = await supabase.functions.invoke('create-payrex-checkout', {
+            body: {
+               seller_id: sellerId,
+               order_id: order.id,
+               items: cart,
+               success_url: `${window.location.origin}/orders`,
+               cancel_url: `${window.location.origin}/cart`
+            }
+          });
+          
+          if (edgeError || !edgeData?.url) {
+            console.error("Payrex Edge Error:", edgeError || edgeData);
+            toast.error("Payment gateway is temporarily unavailable. Defaulting to COD.");
+            await supabase.from('orders').update({ payment_status: 'failed_payrex_fallback' }).eq('id', order.id);
+          } else {
+            localStorage.removeItem("cart");
+            window.dispatchEvent(new Event("cartUpdated"));
+            // Secure Redirect to Payrex hosted checkout
+            window.location.href = edgeData.url;
+            return; 
+          }
+        } else {
+          toast.error("Could not determine seller to route payment. Proceeding as COD.");
+        }
+      }
+
+      // Success (COD or Fallback)
       localStorage.removeItem("cart");
       window.dispatchEvent(new Event("cartUpdated"));
-      toast.success("Order placed successfully!");
+      setTimeout(() => {
+        toast.info("Order placed! You can now chat with the seller to arrange location or manual payment.");
+      }, 1000);
       navigate("/orders");
 
     } catch (error: any) {
@@ -151,10 +194,28 @@ const Checkout = () => {
                   className="h-24"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3 pt-2">
                 <Label>Payment Method</Label>
-                <div className="p-4 border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                  Cash on Delivery (COD) - Standard
+                <div 
+                  className={`p-4 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'payrex' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                  onClick={() => setPaymentMethod('payrex')}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-semibold text-primary">Secure Online Payment</div>
+                    <div className="flex gap-2">
+                      <div className="h-6 w-10 bg-blue-600 rounded text-[10px] text-white flex items-center justify-center font-bold">GCash</div>
+                      <div className="h-6 w-10 bg-slate-800 rounded text-[10px] text-white flex items-center justify-center font-bold">Card</div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">Powered securely by Payrex</p>
+                </div>
+                
+                <div 
+                  className={`p-4 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                  onClick={() => setPaymentMethod('cod')}
+                >
+                  <div className="font-semibold">Cash on Delivery (COD)</div>
+                  <p className="text-sm text-muted-foreground mt-1">Pay when your order arrives</p>
                 </div>
               </div>
             </form>

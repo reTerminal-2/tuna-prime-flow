@@ -13,10 +13,15 @@ const PaymentSettings = () => {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
     enable_cod: true,
-    enable_stripe: false,
-    enable_paypal: false,
     enable_tax: false,
     tax_rate: "0",
+  });
+  
+  const [payrex, setPayrex] = useState({
+    payrex_secret_key: "",
+    payrex_public_key: "",
+    payrex_webhook_secret: "",
+    is_active: false,
   });
 
   useEffect(() => {
@@ -28,21 +33,28 @@ const PaymentSettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from("store_settings")
+      if (storeData) {
+        setSettings({
+          enable_cod: storeData.enable_cod,
+          enable_tax: storeData.enable_tax || false,
+          tax_rate: String(storeData.tax_rate || 0),
+        });
+      }
+
+      const { data: payrexData, error: payrexError } = await supabase
+        .from("seller_payment_settings")
         .select("*")
         .eq("user_id", user.id)
         .single();
-
-      if (error && error.code !== "PGRST116") throw error;
-
-      if (data) {
-        setSettings({
-          enable_cod: data.enable_cod,
-          enable_stripe: data.enable_stripe || false,
-          enable_paypal: data.enable_paypal || false,
-          enable_tax: data.enable_tax || false,
-          tax_rate: String(data.tax_rate || 0),
+        
+      if (payrexError && payrexError.code !== "PGRST116") throw payrexError;
+      
+      if (payrexData) {
+        setPayrex({
+          payrex_secret_key: payrexData.payrex_secret_key || "",
+          payrex_public_key: payrexData.payrex_public_key || "",
+          payrex_webhook_secret: payrexData.payrex_webhook_secret || "",
+          is_active: payrexData.is_active || false,
         });
       }
     } catch (error) {
@@ -59,19 +71,31 @@ const PaymentSettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const updates = {
+      const storeUpdates = {
         user_id: user.id,
         enable_cod: settings.enable_cod,
-        enable_stripe: settings.enable_stripe,
-        enable_paypal: settings.enable_paypal,
         enable_tax: settings.enable_tax,
-        tax_rate: parseFloat(settings.tax_rate),
+        tax_rate: parseFloat(settings.tax_rate) || 0,
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
+      const { error: storeError } = await supabase
         .from("store_settings")
-        .upsert(updates, { onConflict: "user_id" });
+        .upsert(storeUpdates, { onConflict: "user_id" });
+
+      if (storeError) throw storeError;
+
+      const payrexUpdates = {
+        user_id: user.id,
+        ...payrex,
+        updated_at: new Date().toISOString(),
+      };
+      
+      const { error: payrexError } = await supabase
+        .from("seller_payment_settings")
+        .upsert(payrexUpdates, { onConflict: "user_id" });
+        
+      if (payrexError) throw payrexError;
 
       if (error) throw error;
       toast.success("Payment settings saved");
@@ -117,26 +141,50 @@ const PaymentSettings = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between border p-4 rounded-lg opacity-80">
-            <div className="space-y-0.5">
-              <Label className="text-base">Stripe Integration</Label>
-              <p className="text-sm text-muted-foreground">Accept credit cards securely</p>
+          <div className="flex flex-col border p-4 rounded-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-base text-primary font-semibold">Payrex Gateway (Recommended)</Label>
+                <p className="text-sm text-muted-foreground">Accept GCash, PayMaya, Cards via Payrex Philippines</p>
+              </div>
+              <Switch 
+                checked={payrex.is_active} 
+                onCheckedChange={(c) => setPayrex({ ...payrex, is_active: c })}
+              />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Coming Soon</span>
-              <Switch checked={settings.enable_stripe} disabled />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between border p-4 rounded-lg opacity-80">
-            <div className="space-y-0.5">
-              <Label className="text-base">PayPal</Label>
-              <p className="text-sm text-muted-foreground">International payments</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Coming Soon</span>
-              <Switch checked={settings.enable_paypal} disabled />
-            </div>
+            
+            {payrex.is_active && (
+              <div className="pt-4 space-y-4 border-t mt-2">
+                <div className="space-y-2 pl-2">
+                  <Label>Secret Key</Label>
+                  <Input 
+                    type="password" 
+                    placeholder="sk_test_..." 
+                    value={payrex.payrex_secret_key}
+                    onChange={(e) => setPayrex({ ...payrex, payrex_secret_key: e.target.value })}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Never share this key. It is used by our secure backend to process payments.</p>
+                </div>
+                <div className="space-y-2 pl-2">
+                  <Label>Public Key</Label>
+                  <Input 
+                    type="text" 
+                    placeholder="pk_test_..." 
+                    value={payrex.payrex_public_key}
+                    onChange={(e) => setPayrex({ ...payrex, payrex_public_key: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2 pl-2">
+                  <Label>Webhook Secret</Label>
+                  <Input 
+                    type="password" 
+                    placeholder="wh_sec_..." 
+                    value={payrex.payrex_webhook_secret}
+                    onChange={(e) => setPayrex({ ...payrex, payrex_webhook_secret: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

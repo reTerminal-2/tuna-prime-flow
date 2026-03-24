@@ -362,6 +362,39 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_payment_settings: {
+        Row: {
+          id: string
+          user_id: string | null
+          payrex_secret_key: string | null
+          payrex_public_key: string | null
+          payrex_webhook_secret: string | null
+          is_active: boolean | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          payrex_secret_key?: string | null
+          payrex_public_key?: string | null
+          payrex_webhook_secret?: string | null
+          is_active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          payrex_secret_key?: string | null
+          payrex_public_key?: string | null
+          payrex_webhook_secret?: string | null
+          is_active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       stock_adjustments: {
         Row: {
           adjusted_by: string
