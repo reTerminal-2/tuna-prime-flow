@@ -272,10 +272,14 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             navigate("/auth", { replace: true });
             setTimeout(() => hasNavigatedRef.current = false, 100);
           }
-        } else if (session) {
-          setUser(session.user);
-          setIsLoading(false);
-          hasNavigatedRef.current = false;
+          const role = session.user.user_metadata?.role;
+          if (role === 'user') {
+            navigate("/", { replace: true });
+          } else {
+            setUser(session.user);
+            setIsLoading(false);
+            hasNavigatedRef.current = false;
+          }
         }
       }
     );
@@ -283,7 +287,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
       if (session) {
-        setUser(session.user);
+        if (session.user.user_metadata?.role === 'user') {
+          navigate("/", { replace: true });
+        } else {
+          setUser(session.user);
+        }
       } else if (!hasNavigatedRef.current) {
         hasNavigatedRef.current = true;
         navigate("/auth", { replace: true });

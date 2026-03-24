@@ -129,9 +129,13 @@ const StoreLayout = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/orders">My Orders</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/seller/dashboard">Seller Dashboard</Link>
-                  </DropdownMenuItem>
+                  
+                  {(user?.user_metadata?.role === 'admin' || user?.user_metadata?.role === 'seller') && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/seller/dashboard">Seller Dashboard</Link>
+                    </DropdownMenuItem>
+                  )}
+
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                     <LogOut className="h-4 w-4 mr-2" />
