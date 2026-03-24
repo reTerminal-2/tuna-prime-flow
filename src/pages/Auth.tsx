@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { Fish, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { auditService } from "@/services/auditService";
+import Turnstile from "react-turnstile";
+
 
 // Validation schemas
 const loginSchema = z.object({
@@ -56,7 +58,9 @@ const Auth = () => {
   const [resetEmail, setResetEmail] = useState("");
   const [isResetOpen, setIsResetOpen] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const hasNavigatedRef = useRef(false);
+
 
   const [searchParams] = useSearchParams();
 
@@ -159,9 +163,13 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithPassword({
         email: loginData.email.trim(),
         password: loginData.password,
+        options: {
+          captchaToken: captchaToken || undefined,
+        }
       });
 
       if (error) throw error;
+
 
       // Handle remember me
       try {
@@ -190,9 +198,10 @@ const Auth = () => {
       // Provide user-friendly error messages
       if (errorMsg.includes("Invalid login credentials")) {
         toast.error("Incorrect email or password. Please check your credentials and try again.");
-      } else if (errorMsg.includes("Email not confirmed")) {
-        toast.error("Please check your email to verify your account.");
+      } else if (errorMsg.includes("captcha")) {
+        toast.error("Please complete the security check.");
       } else if (errorMsg.includes("User not found")) {
+
         toast.error("No account found with this email. Please sign up first.");
       } else {
         toast.error("Unable to log in. Please check your email and password.");
@@ -226,27 +235,30 @@ const Auth = () => {
         password: signupData.password,
         options: {
           emailRedirectTo: redirectUrl,
+          captchaToken: captchaToken || undefined,
           data: {
             full_name: signupData.fullName.trim(),
             role: signupData.role, // Metadata role
           },
         },
+
       });
 
       if (error) throw error;
 
       setLoginData(prev => ({ ...prev, email: signupData.email }));
       setActiveTab("login");
-      toast.success("Account created! Please log in with your password.");
+      toast.success("Account created successfully!");
       setIsLoading(false);
+
     } catch (error: any) {
       const errorMsg = error.message || "Signup failed";
 
       // Provide user-friendly error messages
       if (errorMsg.includes("already registered") || errorMsg.includes("already exists")) {
         toast.error("This email is already registered. Please log in or use a different email.");
-      } else if (errorMsg.includes("invalid email")) {
-        toast.error("Please enter a valid email address.");
+      } else if (errorMsg.includes("captcha")) {
+        toast.error("Please complete the security check.");
       } else if (errorMsg.includes("Password")) {
         toast.error("Password must be at least 6 characters long.");
       } else {
@@ -412,7 +424,19 @@ const Auth = () => {
                       Forgot password?
                     </Button>
                   </div>
+                  
+                  <div className="flex justify-center transition-opacity duration-300">
+                    <Turnstile
+                      sitekey="1x00000000000000000000AA"
+                      onVerify={(token) => setCaptchaToken(token)}
+                      onExpire={() => setCaptchaToken(null)}
+                      onError={() => setCaptchaToken(null)}
+                      theme="light"
+                    />
+                  </div>
+
                   <Button type="submit" className="w-full" disabled={isLoading}>
+
                     {isLoading ? "Logging in..." : "Log In"}
                   </Button>
                 </form>
@@ -489,7 +513,19 @@ const Auth = () => {
                       <option value="admin">Seller (I want to sell tuna)</option>
                     </select>
                   </div>
+
+                  <div className="flex justify-center transition-opacity duration-300 py-2">
+                    <Turnstile
+                      sitekey="1x00000000000000000000AA"
+                      onVerify={(token) => setCaptchaToken(token)}
+                      onExpire={() => setCaptchaToken(null)}
+                      onError={() => setCaptchaToken(null)}
+                      theme="light"
+                    />
+                  </div>
+
                   <Button type="submit" className="w-full" disabled={isLoading}>
+
                     {isLoading ? "Creating account..." : "Create Account"}
                   </Button>
                 </form>
