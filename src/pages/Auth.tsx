@@ -427,7 +427,7 @@ const Auth = () => {
                   
                   <div className="flex justify-center transition-opacity duration-300">
                     <Turnstile
-                      sitekey="1x00000000000000000000AA"
+                      sitekey="0x4AAAAAACvhHWZo5qKieKm-"
                       onVerify={(token) => setCaptchaToken(token)}
                       onExpire={() => setCaptchaToken(null)}
                       onError={() => setCaptchaToken(null)}
@@ -516,7 +516,7 @@ const Auth = () => {
 
                   <div className="flex justify-center transition-opacity duration-300 py-2">
                     <Turnstile
-                      sitekey="1x00000000000000000000AA"
+                      sitekey="0x4AAAAAACvhHWZo5qKieKm-"
                       onVerify={(token) => setCaptchaToken(token)}
                       onExpire={() => setCaptchaToken(null)}
                       onError={() => setCaptchaToken(null)}
