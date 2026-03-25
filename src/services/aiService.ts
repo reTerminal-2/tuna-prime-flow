@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { auditService } from "./auditService";
 import { differenceInDays, subDays } from "date-fns";
 
@@ -220,7 +220,7 @@ ${examples ? `\nLEARNED PATTERNS:\n${examples}` : ''}
 
     getDailyActionPlan: async (context: any) => {
         const res = await aiService.chatWithAI("List 4 manager tasks. Return JSON array.", { products: [], orders: [], customers: [] });
-        try { return JSON.parse(res.message.match(/\[[\s\S]*\]/)?.[0] || []); } catch { return ["Check stock"]; }
+        try { return JSON.parse(res.message.match(/\[[\s\S]*\]/)?.[0] || '[]'); } catch { return ["Check stock"]; }
     },
 
     testConnection: async () => {
