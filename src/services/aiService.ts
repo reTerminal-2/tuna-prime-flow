@@ -299,12 +299,13 @@ ${fewShotBlock}`;
             };
         }
 
-        // Fetch dynamic settings from DB first
-        let openRouterModel = 'stepfun/step-3.5-flash:free';
-        let openaiModel = 'gpt-4o-mini';
-        let aiProvider = 'openai'; // default
-        let authToken = '';
-        let psidts = '';
+        // === HARDCODED OPENROUTER DEFAULTS ===
+        const OPENROUTER_API_KEY = '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';
+        const OPENROUTER_MODEL = 'stepfun/step-3.5-flash:free';
+
+        let openaiModel = OPENROUTER_MODEL;
+        let aiProvider = 'openrouter'; // default to openrouter
+        let authToken = OPENROUTER_API_KEY;
         try {
             const { data } = await supabase.from('system_configs' as any).select('config_key, config_value');
             if (data) {
@@ -316,14 +317,9 @@ ${fewShotBlock}`;
                 if (modelSetting?.config_value) openaiModel = modelSetting.config_value;
                 if (providerSetting?.config_value) aiProvider = providerSetting.config_value;
                 if (authSetting?.config_value) authToken = authSetting.config_value;
-
-                // For OpenRouter specific defaults if not in DB
-                if (aiProvider === 'openrouter' && !modelSetting) {
-                    openaiModel = 'stepfun/step-3.5-flash:free';
-                }
             }
         } catch (e) {
-            console.warn('[TunaBrain] Failed to fetch dynamic settings, using defaults.', e);
+            console.warn('[TunaBrain] Failed to fetch dynamic settings, using hardcoded OpenRouter defaults.', e);
         }
 
         const { systemPrompt, userMessage } = await aiService.generateChatPayload(message, context);
@@ -344,12 +340,12 @@ ${fewShotBlock}`;
             url: 'https://openrouter.ai/api/v1/chat/completions',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken || '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'}`,
+                'Authorization': `Bearer ${authToken}`,
                 'HTTP-Referer': 'https://tunaflow.netlify.app',
                 'X-Title': 'TunaFlow V2'
             },
             payload: {
-                model: openaiModel.includes('/') ? openaiModel : 'stepfun/step-3.5-flash:free',
+                model: openaiModel.includes('/') ? openaiModel : OPENROUTER_MODEL,
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userMessage }
@@ -381,12 +377,14 @@ USER REQUEST: ${userMessage}`
             }
         };
 
-        if (aiProvider === 'openrouter' || aiProvider === 'vps') {
-            endpoints.push(openRouterEndpoint, netlifyProEndpoint);
-        } else if (aiProvider === 'pro_no_vps') {
+        // OpenRouter is ALWAYS the primary endpoint now
+        if (aiProvider === 'pro_no_vps') {
             endpoints.push(netlifyProEndpoint, openRouterEndpoint);
-        } else {
+        } else if (aiProvider === 'openai') {
             endpoints.push(openaiEndpoint, openRouterEndpoint);
+        } else {
+            // Default: OpenRouter first (covers 'openrouter', 'vps', and any other value)
+            endpoints.push(openRouterEndpoint, netlifyProEndpoint);
         }
 
         for (const target of endpoints) {
