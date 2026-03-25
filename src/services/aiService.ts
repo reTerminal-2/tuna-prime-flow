@@ -300,7 +300,7 @@ ${fewShotBlock}`;
         }
 
         // === HARDCODED OPENROUTER DEFAULTS ===
-        const OPENROUTER_API_KEY = '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';
+        const OPENROUTER_API_KEY = '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';
         const OPENROUTER_MODEL = 'stepfun/step-3.5-flash:free';
 
         let openaiModel = OPENROUTER_MODEL;
