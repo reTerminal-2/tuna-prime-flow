@@ -127,28 +127,27 @@ GUIDELINES:
 ${examples ? `\nLEARNED PATTERNS:\n${examples}` : ''}
 `;
 
-        // 4. Direct API Call via OpenRouter
+        // 4. API Call via Proxy
         try {
-            const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            const res = await fetch('/api/openrouter', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENROUTER_KEY}`,
-                    'HTTP-Referer': 'https://tunaflow.netlify.app',
-                    'X-Title': 'TunaFlow V2',
+                    'Authorization': `Bearer ${OPENROUTER_KEY}`
                 },
                 body: JSON.stringify({
                     model: OPENROUTER_MODEL,
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: message }
-                    ],
-                    // stepfun might not support reasoning object yet, removing to be safe or keep it.
-                    // For now, OpenRouter ignores invalid properties mostly.
+                    ]
                 })
             });
 
-            if (!res.ok) throw new Error(`API Error: ${res.status}`);
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`API Error: ${res.status} - ${errText}`);
+            }
             
             const data = await res.json();
             const content = data.choices?.[0]?.message?.content;
@@ -229,13 +228,11 @@ ${examples ? `\nLEARNED PATTERNS:\n${examples}` : ''}
 
     testConnection: async () => {
         try {
-            const res = await fetch('https://openrouter.ai/api/v1/chat/completions', { 
+            const res = await fetch('/api/openrouter', { 
                 method: 'POST', 
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer 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`,
-                    'HTTP-Referer': 'https://tunaflow.netlify.app',
-                    'X-Title': 'TunaFlow V2'
+                    'Authorization': `Bearer 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`
                 }, 
                 body: JSON.stringify({ model: 'stepfun/step-3.5-flash:free', messages: [{ role: 'user', content: 'ping' }] }) 
             });

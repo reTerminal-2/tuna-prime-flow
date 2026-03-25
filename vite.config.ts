@@ -15,6 +15,12 @@ export default defineConfig(({ mode }) => ({
         rewrite: (path) => path.replace(/^\/api\/g4f/, ''),
         secure: false,
       },
+      '/api/openrouter': {
+        target: 'https://openrouter.ai/api/v1/chat/completions',
+        changeOrigin: true,
+        rewrite: (path) => '',
+        secure: false,
+      },
       '/api/hf': {
         target: 'https://api-inference.huggingface.co',
         changeOrigin: true,
