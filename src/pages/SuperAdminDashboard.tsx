@@ -61,10 +61,9 @@ export default function SuperAdminDashboard() {
 
     // AI Configuration States
     const [aiProvider, setAiProvider] = useState<string>('gpt4free');
-    const [g4fModel, setG4fModel] = useState('gpt-4o-mini');
+    const [g4fModel, setG4fModel] = useState('stepfun/step-3.5-flash:free');
     const [g4fVmUrl, setG4fVmUrl] = useState('');
     const [openaiKey, setOpenaiKey] = useState("");
-    const [geminiPsidts, setGeminiPsidts] = useState("");
     const [systemPrompt, setSystemPrompt] = useState("");
     const [testingAI, setTestingAI] = useState(false);
     const [savingAI, setSavingAI] = useState(false);
@@ -112,7 +111,6 @@ export default function SuperAdminDashboard() {
                 if (promptConfig) setSystemPrompt(promptConfig.config_value);
                 if (modelConfig) setG4fModel(modelConfig.config_value);
                 if (providerConfig) setAiProvider(providerConfig.config_value);
-                if (psidtsConfig) setGeminiPsidts(psidtsConfig.config_value);
             }
         } catch (error) {
             console.error('Error loading AI settings from DB:', error);
@@ -211,8 +209,7 @@ export default function SuperAdminDashboard() {
                 { config_key: 'vps_url', config_value: g4fVmUrl, updated_at: new Date().toISOString() },
                 { config_key: 'system_prompt', config_value: systemPrompt, updated_at: new Date().toISOString() },
                 { config_key: 'openai_model', config_value: g4fModel, updated_at: new Date().toISOString() },
-                { config_key: 'ai_provider', config_value: aiProvider, updated_at: new Date().toISOString() },
-                { config_key: 'gemini_psidts', config_value: geminiPsidts, updated_at: new Date().toISOString() }
+                { config_key: 'ai_provider', config_value: aiProvider, updated_at: new Date().toISOString() }
             ];
 
             const { error } = await supabase
@@ -676,19 +673,19 @@ export default function SuperAdminDashboard() {
                                                 <SelectValue placeholder="Select Auth Mode" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="pro_no_vps">ChatGPT Pro (Session Token - NO API KEY)</SelectItem>
-                                              <SelectItem value="vps">TunaBrain Pro (Via CUSTOM VPS)</SelectItem>
-                                              <SelectItem value="orange_pi">Orange Pi (Gemini API)</SelectItem>
+                                                <SelectItem value="openrouter">OpenRouter (Free + Reasoning Models)</SelectItem>
+                                              <SelectItem value="pro_no_vps">ChatGPT Pro (Session Token - NO API KEY)</SelectItem>
+                                              <SelectItem value="vps">TunaBrain Pro (Standard VPS)</SelectItem>
                                               <SelectItem value="openai">OpenAI Legacy (API Key Mode)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <p className="text-[10px] text-muted-foreground">
                                             {aiProvider === 'pro_no_vps'
                                                 ? "TunaBrain will use your ChatGPT Pro Account session via our secure Netlify bridge."
-                                                : aiProvider === 'vps'
-                                                    ? "Advanced: Routes traffic through your own private server relay."
-                                                    : aiProvider === 'orange_pi'
-                                                        ? "Embedded: Routes traffic through your local Orange Pi hardware."
+                                                : aiProvider === 'openrouter'
+                                                    ? "Recommended: Uses free, high-performance models from OpenRouter."
+                                                    : aiProvider === 'vps'
+                                                        ? "Advanced: Routes traffic through your private server relay."
                                                         : "Legacy: Uses standard OpenAI API billing."}
                                         </p>
                                     </div>
@@ -696,52 +693,29 @@ export default function SuperAdminDashboard() {
                                       <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
                                           <Label className="text-sm font-medium">
                                               {aiProvider === 'openai' ? 'Legacy OpenAI API Key' : 
-                                               aiProvider === 'orange_pi' ? 'Gemini Cookie (__Secure-1PSID)' : 
-                                               'ChatGPT Session Token (__Secure-next-auth)'}
+                                               aiProvider === 'openrouter' ? 'OpenRouter API Key' :
+                                               'ChatGPT Session Token (Optional for VPS)'}
                                           </Label>
-                                        <div className="relative">
-                                            <Input
-                                                type="password"
-                                                placeholder={aiProvider === 'openai' ? "sk-..." : 
-                                                             aiProvider === 'orange_pi' ? "Your __Secure-1PSID cookie value" : 
-                                                             "eyJhbG.. (Your browser cookie)"}
-                                                value={openaiKey}
-                                                onChange={(e) => setOpenaiKey(e.target.value)}
-                                                className="bg-muted/30 pr-10"
-                                            />
+                                          <div className="relative">
+                                              <Input
+                                                  type="password"
+                                                  placeholder={aiProvider === 'openai' ? "sk-..." : "eyJhbG.. (Your browser cookie)"}
+                                                  value={openaiKey}
+                                                  onChange={(e) => setOpenaiKey(e.target.value)}
+                                                  className="bg-muted/30 pr-10"
+                                              />
                                             <div className="absolute right-3 top-2.5">
-                                                <Zap className={`w-4 h-4 ${openaiKey ? 'text-yellow-500' : 'text-muted-foreground'}`} />
-                                            </div>
-                                        </div>
-                                        <p className="text-[10px] text-muted-foreground">
-                                                                        {aiProvider === 'openai'
-                                              ? "Standard API billing will apply."
-                                              : aiProvider === 'orange_pi'
-                                                  ? "Paste your __Secure-1PSID cookie value here."
-                                                  : "Paste your session token here. We use this to bridge your Pro account features to TunaBrain."}
-                                        </p>
-                                      </div>
- 
-                                      {aiProvider === 'orange_pi' && (
-                                          <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                                              <Label className="text-sm font-medium">Gemini Lifecycle Token (__Secure-1PSIDTS)</Label>
-                                              <div className="relative">
-                                                  <Input
-                                                      type="password"
-                                                      placeholder="sidts-..."
-                                                      value={geminiPsidts}
-                                                      onChange={(e) => setGeminiPsidts(e.target.value)}
-                                                      className="bg-muted/30 pr-10"
-                                                  />
-                                                  <div className="absolute right-3 top-2.5">
-                                                      <Clock className={`w-4 h-4 ${geminiPsidts ? 'text-primary' : 'text-muted-foreground'}`} />
-                                                  </div>
+                                                  <Zap className={`w-4 h-4 ${openaiKey ? 'text-yellow-500' : 'text-muted-foreground'}`} />
                                               </div>
-                                              <p className="text-[10px] text-muted-foreground">
-                                                  Required for Gemini session refreshing and continuity.
-                                              </p>
                                           </div>
-                                      )}
+                                          <p className="text-[10px] text-muted-foreground">
+                                              {aiProvider === 'openai'
+                                                  ? "Standard API billing will apply."
+                                                  : aiProvider === 'openrouter'
+                                                      ? "Paste your OpenRouter API key here. Reasoning models are supported."
+                                                      : "Paste your session token here if required by your VPS provider selection."}
+                                          </p>
+                                      </div>
 
                                       {aiProvider === 'vps' && (
                                           <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
@@ -772,15 +746,14 @@ export default function SuperAdminDashboard() {
                                                   <SelectValue placeholder="Select an OpenAI Model" />
                                               </SelectTrigger>
                                               <SelectContent>
-                                                  <SelectItem value="gpt-5-nano">TunaBrain GPT (Ultra-Private GPT-5)</SelectItem>
-                                                  <SelectItem value="gpt-5-preview">GPT-5 Preview (Experimental)</SelectItem>
-                                                  <SelectItem value="o1">OpenAI o1 (Advanced Reasoning)</SelectItem>
-                                                  <SelectItem value="o1-mini">o1-mini (Fast Reasoning)</SelectItem>
-                                                  <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
-                                                  <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fast & Cost-Effective)</SelectItem>
-                                                  <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                                                  <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                                              </SelectContent>
+                                                    <SelectItem value="stepfun/step-3.5-flash:free">Step-3.5-Flash (Free reasoning)</SelectItem>
+                                                    <SelectItem value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</SelectItem>
+                                                    <SelectItem value="google/gemini-2.0-pro-exp-02-05:free">Gemini 2.0 Pro (Free)</SelectItem>
+                                                    <SelectItem value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (Free)</SelectItem>
+                                                    <SelectItem value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free)</SelectItem>
+                                                    <SelectItem value="gpt-4o-mini">GPT-4o Mini (OpenAI)</SelectItem>
+                                                    <SelectItem value="gpt-4o">GPT-4o (OpenAI Premium)</SelectItem>
+                                                </SelectContent>
                                           </Select>
                                           <p className="text-xs text-slate-400">
                                               Select the specific OpenAI model TunaBrain should use.

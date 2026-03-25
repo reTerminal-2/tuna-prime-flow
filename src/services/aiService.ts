@@ -300,7 +300,7 @@ ${fewShotBlock}`;
         }
 
         // Fetch dynamic settings from DB first
-        let vpsUrl = 'http://72.60.232.20:3100';
+        let openRouterModel = 'stepfun/step-3.5-flash:free';
         let openaiModel = 'gpt-4o-mini';
         let aiProvider = 'openai'; // default
         let authToken = '';
@@ -309,17 +309,18 @@ ${fewShotBlock}`;
             const { data } = await supabase.from('system_configs' as any).select('config_key, config_value');
             if (data) {
                 const configs = data as any[];
-                const vpsSetting = configs.find(c => c.config_key === 'vps_url');
                 const modelSetting = configs.find(c => c.config_key === 'openai_model');
                 const providerSetting = configs.find(c => c.config_key === 'ai_provider');
                 const authSetting = configs.find(c => c.config_key === 'openai_api_key');
-                const psidtsSetting = configs.find(c => c.config_key === 'gemini_psidts');
 
-                if (vpsSetting?.config_value) vpsUrl = vpsSetting.config_value;
                 if (modelSetting?.config_value) openaiModel = modelSetting.config_value;
                 if (providerSetting?.config_value) aiProvider = providerSetting.config_value;
                 if (authSetting?.config_value) authToken = authSetting.config_value;
-                if (psidtsSetting?.config_value) psidts = psidtsSetting.config_value;
+
+                // For OpenRouter specific defaults if not in DB
+                if (aiProvider === 'openrouter' && !modelSetting) {
+                    openaiModel = 'stepfun/step-3.5-flash:free';
+                }
             }
         } catch (e) {
             console.warn('[TunaBrain] Failed to fetch dynamic settings, using defaults.', e);
@@ -339,41 +340,21 @@ ${fewShotBlock}`;
             }
         };
 
-        const vpsEndpoint = {
-            url: vpsUrl.endsWith('/chat') ? vpsUrl : `${vpsUrl}/chat`,
+        const openRouterEndpoint = {
+            url: 'https://openrouter.ai/api/v1/chat/completions',
             headers: {
                 'Content-Type': 'application/json',
-                ...(authToken ? { 'Authorization': authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}` } : {})
+                'Authorization': `Bearer ${authToken || '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'}`,
+                'HTTP-Referer': 'https://tunaflow.netlify.app',
+                'X-Title': 'TunaFlow V2'
             },
             payload: {
-                model: openaiModel === 'gpt-5-nano' ? 'gpt-4' : openaiModel, // Map nano to gpt-4 on VPS
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userMessage }
-                ]
-            }
-        };
-
-        const pollinationEndpoint = {
-            url: 'https://text.pollinations.ai/openai',
-            headers: { 'Content-Type': 'application/json' },
-            payload: {
-                model: 'openai',
+                model: openaiModel.includes('/') ? openaiModel : 'stepfun/step-3.5-flash:free',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userMessage }
                 ],
-                seed: 42
-            }
-        };
-
-        const orangePiEndpoint = {
-            url: 'http://100.102.163.35:8000/chat',
-            headers: { 'Content-Type': 'application/json' },
-            payload: {
-                message: `${systemPrompt}\n\nUSER REQUEST: ${userMessage}`,
-                psid: authToken,
-                psidts: psidts
+                reasoning: { enabled: true }
             }
         };
 
@@ -400,14 +381,12 @@ USER REQUEST: ${userMessage}`
             }
         };
 
-        if (aiProvider === 'orange_pi') {
-            endpoints.push(orangePiEndpoint, vpsEndpoint, pollinationEndpoint);
+        if (aiProvider === 'openrouter' || aiProvider === 'vps') {
+            endpoints.push(openRouterEndpoint, netlifyProEndpoint);
         } else if (aiProvider === 'pro_no_vps') {
-            endpoints.push(netlifyProEndpoint, pollinationEndpoint);
-        } else if (aiProvider === 'vps') {
-            endpoints.push(vpsEndpoint, openaiEndpoint, pollinationEndpoint);
+            endpoints.push(netlifyProEndpoint, openRouterEndpoint);
         } else {
-            endpoints.push(openaiEndpoint, vpsEndpoint, pollinationEndpoint);
+            endpoints.push(openaiEndpoint, openRouterEndpoint);
         }
 
         for (const target of endpoints) {
