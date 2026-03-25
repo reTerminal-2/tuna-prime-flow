@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export interface ChatResponse {
     message: string;
@@ -39,6 +40,21 @@ export interface OrderRisk {
     priorityScore: number;
 }
 
+// -------------------------------------------------------------------------
+// HARDCODED API KEY AS REQUESTED BY USER
+// -------------------------------------------------------------------------
+const GEMINI_API_KEY = "AIzaSyATnz4hqzdVO7m7a76Teh3dfhn4NUrRz4E";
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+// Use the requested model
+// Note: SDK automatically manages endpoint mapping (v1beta/models/...)
+const geminiModel = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash", // Using 1.5-flash as it's the stable supported identifier in standard SDK for fast completion
+    generationConfig: {
+        temperature: 0.7,
+    }
+});
+
 export const aiService = {
 
     // =====================================================================
@@ -70,22 +86,11 @@ export const aiService = {
     },
 
     // =====================================================================
-    // CORE INTELLIGENCE (Gemini API)
+    // CORE INTELLIGENCE (Gemini SDK)
     // =====================================================================
 
     chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
         
-        // Retrieve Gemini API Key from SuperAdmin config or fallback
-        let GEMINI_API_KEY = localStorage.getItem("gemini_api_key");
-        if (!GEMINI_API_KEY) {
-            const { data } = await supabase.from('system_configs' as any).select('config_value').eq('config_key', 'gemini_api_key').single();
-            GEMINI_API_KEY = data?.config_value || 'YOUR_GEMINI_API_KEY_HERE';
-        }
-
-        if (GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
-            return { message: "⚠️ Gemini API key is missing. Please configure it in the SuperAdmin dashboard or database (`system_configs` -> `gemini_api_key`)." };
-        }
-
         const totalValue = context.products?.reduce((acc, p) => acc + ((p.current_stock || 0) * (p.selling_price || 0)), 0) || 0;
         const lowStock = context.products?.filter(p => (p.current_stock || 0) < 10).length || 0;
         const learned = await aiService.getLearnedPatterns(2);
@@ -111,46 +116,44 @@ ${examples ? `LEARNED PAST EXAMPLES:\n${examples}` : ''}
 `;
 
         try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    system_instruction: { parts: [{ text: systemPrompt }] },
-                    contents: [{ role: 'user', parts: [{ text: message }] }],
-                    generationConfig: { temperature: 0.7 }
-                })
+            // Using the official SDK
+            const chat = geminiModel.startChat({
+                history: [
+                    {
+                        role: "user",
+                        parts: [{ text: systemPrompt }],
+                    },
+                    {
+                        role: "model",
+                        parts: [{ text: "Understood. I have absorbed the context and guidelines. Awaiting instructions." }],
+                    }
+                ],
             });
 
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(`Gemini API Error: ${response.status} - ${errText}`);
-            }
+            const result = await chat.sendMessage(message);
+            const responseText = result.response.text();
 
-            const data = await response.json();
-            const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!responseText) throw new Error("Empty response from Gemini");
 
-            if (!content) throw new Error("Empty response from Gemini");
-
-            // Look for proposed action JSON in the response
-            let finalMessage = content;
+            // Look for proposed action JSON in the SDK response
+            let finalMessage = responseText;
             let actionObj = undefined;
 
-            const jsonMatch = content.match(/\{[\s\S]*"proposedAction"[\s\S]*\}/);
+            const jsonMatch = responseText.match(/\{[\s\S]*"proposedAction"[\s\S]*\}/);
             if (jsonMatch) {
                 try {
                     const parsed = JSON.parse(jsonMatch[0]);
                     if (parsed.proposedAction) {
                         actionObj = parsed.proposedAction;
-                        // Strip the JSON from the user-facing message
-                        finalMessage = content.replace(jsonMatch[0], '').trim();
+                        finalMessage = responseText.replace(jsonMatch[0], '').trim();
                     }
                 } catch (e) { /* ignore parse error */ }
             }
 
-            return { message: finalMessage || content, proposedAction: actionObj };
+            return { message: finalMessage || responseText, proposedAction: actionObj };
 
         } catch (error: any) {
-            console.error('[TunaBrain] Gemini Failure:', error.message);
+            console.error('[TunaBrain] Gemini SDK Failure:', error.message);
             return { message: `🔌 Connection fluctuation. Error: ${error.message}. Please retry.` };
         }
     },
@@ -171,22 +174,15 @@ ${examples ? `LEARNED PAST EXAMPLES:\n${examples}` : ''}
     },
 
     testConnection: async () => {
-        let GEMINI_API_KEY = localStorage.getItem("gemini_api_key");
-        if (!GEMINI_API_KEY) {
-            const { data } = await supabase.from('system_configs' as any).select('config_value').eq('config_key', 'gemini_api_key').single();
-            GEMINI_API_KEY = data?.config_value;
-        }
-
-        if (!GEMINI_API_KEY) return { success: false, message: "❌ Gemini API Key not configured" };
-
         try {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'ping' }] }] }) 
-            });
-            return res.ok ? { success: true, message: "✅ Gemini API Online" } : { success: false, message: "❌ API Offline/Key Invalid" };
-        } catch { return { success: false, message: "❌ Network Error" }; }
+            const chat = geminiModel.startChat();
+            const result = await chat.sendMessage("ping");
+            return result.response.text() 
+                ? { success: true, message: "✅ Gemini API SDK Online" } 
+                : { success: false, message: "❌ API Offline/Key Invalid" };
+        } catch { 
+            return { success: false, message: "❌ Network Error or Invalid Key" }; 
+        }
     },
 
     executeAction: async (action: any) => {

@@ -30,10 +30,6 @@ const AIManager = () => {
   const isMobileLayout = useIsMobileLayout();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobileLayout);
-  
-  // Gemini Key State
-  const [hasApiKey, setHasApiKey] = useState(!!localStorage.getItem("gemini_api_key"));
-  const [apiKeyValue, setApiKeyValue] = useState("");
 
   const {
     messages,
@@ -58,7 +54,7 @@ const AIManager = () => {
   const [supplierFormData, setSupplierFormData] = useState<any>(undefined);
   const [isStockAdjFormOpen, setIsStockAdjFormOpen] = useState(false);
   const [stockAdjFormData, setStockAdjFormData] = useState<any>(undefined);
-
+  
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -66,14 +62,7 @@ const AIManager = () => {
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
     }
-  }, [messages, isTyping, hasApiKey]);
-
-  const saveApiKey = () => {
-    if (apiKeyValue.trim()) {
-      localStorage.setItem("gemini_api_key", apiKeyValue.trim());
-      setHasApiKey(true);
-    }
-  };
+  }, [messages, isTyping]);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-[#f8f9fa] text-[#202124] overflow-hidden m-0 p-0 font-sans tracking-tight animate-in fade-in duration-300">
@@ -158,31 +147,8 @@ const AIManager = () => {
           </div>
         </nav>
 
-        {!hasApiKey ? (
-          /* API Setup Screen */
-          <div className="flex-1 w-full max-w-2xl px-4 flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-500">
-             <div className="h-20 w-20 rounded-3xl bg-gradient-to-tr from-[#1a73e8] to-[#ceead6] flex items-center justify-center shadow-xl mb-8 transform -rotate-3">
-               <KeyRound className="h-10 w-10 text-white" />
-             </div>
-             <h2 className="text-3xl font-black text-[#202124] mb-4 tracking-tight">Activate TunaBrain Gemini</h2>
-             <p className="text-[#5f6368] mb-8 text-lg font-medium leading-relaxed max-w-lg">
-               To power this AI for free, securely provide your <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[#1a73e8] hover:underline underline-offset-4 font-bold">Google Gemini API Key</a>. It is stored locally on your device.
-             </p>
-             <div className="w-full max-w-md flex flex-col sm:flex-row gap-3">
-                <Input 
-                  value={apiKeyValue}
-                  onChange={(e) => setApiKeyValue(e.target.value)}
-                  placeholder="Paste AI key 'AIzaSy...'"
-                  className="h-14 rounded-2xl border-[#dadce0] focus-visible:ring-[#1a73e8] px-5 text-[15px]"
-                />
-                <Button onClick={saveApiKey} className="h-14 px-8 rounded-2xl bg-[#1a73e8] hover:bg-[#1557b0] text-white shadow-lg shadow-blue-500/20 font-bold text-[15px]">
-                  Initialize
-                </Button>
-             </div>
-          </div>
-        ) : (
-          /* Chat Interface */
-          <ScrollArea ref={scrollAreaRef} className="flex-1 w-full max-w-4xl overflow-y-auto px-4 sm:px-8 pt-24 pb-4">
+        {/* Chat Interface */}
+        <ScrollArea ref={scrollAreaRef} className="flex-1 w-full max-w-4xl overflow-y-auto px-4 sm:px-8 pt-24 pb-4">
             <div className="py-6 space-y-10 min-h-full">
               {messages.length === 1 && messages[0].id === 'init' && (
                  <div className="flex flex-col items-center justify-center mt-20 mb-32 text-center animate-in fade-in slide-in-from-bottom-5 duration-700">
@@ -273,12 +239,8 @@ const AIManager = () => {
               
               <div className="h-10"></div>
             </div>
-          </ScrollArea>
-        )}
-
         {/* Input Form Floating - Gemini Style */}
-        {hasApiKey && (
-          <div className="w-full max-w-4xl p-4 sm:px-8 absolute bottom-0 z-30 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pb-6">
+        <div className="w-full max-w-4xl p-4 sm:px-8 absolute bottom-0 z-30 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pb-6">
             <form 
               onSubmit={(e) => { e.preventDefault(); sendMessage(); }} 
               className="relative flex items-center bg-[#f1f3f4] rounded-[2rem] p-1.5 shadow-sm focus-within:ring-2 focus-within:ring-[#1a73e8]/30 focus-within:bg-white focus-within:shadow-md transition-all duration-300 border border-transparent focus-within:border-[#e8f0fe] overflow-hidden"
@@ -304,7 +266,6 @@ const AIManager = () => {
               Gemini may produce inaccurate information about people, places, or facts.
             </p>
           </div>
-        )}
 
       </main>
 
