@@ -94,9 +94,9 @@ export const aiService = {
      * Chat with AI — Direct OpenRouter Proxy Connection
      */
     chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
-        if (!isBusinessRelated(message)) {
-            return { message: "⚠️ TunaBrain is a specialized business intelligence system. Please focus on your inventory, sales, or business strategy." };
-        }
+        // if (!isBusinessRelated(message)) {
+        //     return { message: "⚠️ TunaBrain is a specialized business intelligence system. Please focus on your inventory, sales, or business strategy." };
+        // }
 
         const OPENROUTER_MODEL = 'stepfun/step-3.5-flash:free';
         const OPENROUTER_KEY = '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';
