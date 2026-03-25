@@ -337,20 +337,17 @@ ${fewShotBlock}`;
         };
 
         const openRouterEndpoint = {
-            url: 'https://openrouter.ai/api/v1/chat/completions',
+            url: '/api/openrouter',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
-                'HTTP-Referer': 'https://tunaflow.netlify.app',
-                'X-Title': 'TunaFlow V2'
+                'Authorization': `Bearer ${authToken}`
             },
             payload: {
                 model: openaiModel.includes('/') ? openaiModel : OPENROUTER_MODEL,
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userMessage }
-                ],
-                reasoning: { enabled: true }
+                ]
             }
         };
 

@@ -10,3 +10,7 @@
 [[edge_functions]]
   path = "/api/g4f"
   function = "g4f-proxy"
+
+[[edge_functions]]
+  path = "/api/openrouter"
+  function = "openrouter-proxy"
