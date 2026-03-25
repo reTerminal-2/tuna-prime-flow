@@ -304,6 +304,7 @@ ${fewShotBlock}`;
         let openaiModel = 'gpt-4o-mini';
         let aiProvider = 'openai'; // default
         let authToken = '';
+        let psidts = '';
         try {
             const { data } = await supabase.from('system_configs' as any).select('config_key, config_value');
             if (data) {
@@ -312,11 +313,13 @@ ${fewShotBlock}`;
                 const modelSetting = configs.find(c => c.config_key === 'openai_model');
                 const providerSetting = configs.find(c => c.config_key === 'ai_provider');
                 const authSetting = configs.find(c => c.config_key === 'openai_api_key');
+                const psidtsSetting = configs.find(c => c.config_key === 'gemini_psidts');
 
                 if (vpsSetting?.config_value) vpsUrl = vpsSetting.config_value;
                 if (modelSetting?.config_value) openaiModel = modelSetting.config_value;
                 if (providerSetting?.config_value) aiProvider = providerSetting.config_value;
                 if (authSetting?.config_value) authToken = authSetting.config_value;
+                if (psidtsSetting?.config_value) psidts = psidtsSetting.config_value;
             }
         } catch (e) {
             console.warn('[TunaBrain] Failed to fetch dynamic settings, using defaults.', e);
@@ -364,6 +367,16 @@ ${fewShotBlock}`;
             }
         };
 
+        const orangePiEndpoint = {
+            url: 'http://100.102.163.35:8000/chat',
+            headers: { 'Content-Type': 'application/json' },
+            payload: {
+                message: `${systemPrompt}\n\nUSER REQUEST: ${userMessage}`,
+                psid: authToken,
+                psidts: psidts
+            }
+        };
+
         // Determine priority based on provider setting
         const endpoints = [];
         const netlifyProEndpoint = {
@@ -387,7 +400,9 @@ USER REQUEST: ${userMessage}`
             }
         };
 
-        if (aiProvider === 'pro_no_vps') {
+        if (aiProvider === 'orange_pi') {
+            endpoints.push(orangePiEndpoint, vpsEndpoint, pollinationEndpoint);
+        } else if (aiProvider === 'pro_no_vps') {
             endpoints.push(netlifyProEndpoint, pollinationEndpoint);
         } else if (aiProvider === 'vps') {
             endpoints.push(vpsEndpoint, openaiEndpoint, pollinationEndpoint);
