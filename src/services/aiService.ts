@@ -1,6 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { auditService } from "./auditService";
-import { differenceInDays, subDays } from "date-fns";
 
 export interface ChatResponse {
     message: string;
@@ -41,21 +39,6 @@ export interface OrderRisk {
     priorityScore: number;
 }
 
-// --- UTILITIES ---
-const isBusinessRelated = (msg: string): boolean => {
-    const keywords = [
-        'inventory', 'price', 'pricing', 'sale', 'sold', 'stock', 
-        'profit', 'revenue', 'cost', 'supplier', 'customer', 'order',
-        'fish', 'tuna', 'market', 'business', 'forecast', 'trend',
-        'performance', 'gmv', 'optimize', 'audit', 'transaction', 'p.o.s'
-    ];
-    const lower = msg.toLowerCase();
-    return keywords.some(k => lower.includes(k)) || lower.length < 10; // Allow short greetings
-};
-
-/**
- * TUNABRAIN ELITE - AI Service Backend
- */
 export const aiService = {
 
     // =====================================================================
@@ -78,7 +61,7 @@ export const aiService = {
         } catch (e) { console.error('[TunaBrain] Feedback failed:', e); }
     },
 
-    getLearnedPatterns: async (limit = 5): Promise<any[]> => {
+    getLearnedPatterns: async (limit = 3): Promise<any[]> => {
         const { data } = await supabase.from('learned_patterns')
             .select('user_question, ai_response')
             .order('upvotes', { ascending: false })
@@ -87,173 +70,124 @@ export const aiService = {
     },
 
     // =====================================================================
-    // CORE INTELLIGENCE (The "Trained" Backend)
+    // CORE INTELLIGENCE (Gemini API)
     // =====================================================================
 
-    /**
-     * Chat with AI — Direct OpenRouter Proxy Connection
-     */
     chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
-        // if (!isBusinessRelated(message)) {
-        //     return { message: "⚠️ TunaBrain is a specialized business intelligence system. Please focus on your inventory, sales, or business strategy." };
-        // }
-
-        const OPENROUTER_MODEL = 'stepfun/step-3.5-flash:free';
-        const OPENROUTER_KEY = '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';
-
-        // 1. Fetch Contextual Business State
-        const totalValue = context.products?.reduce((acc, p) => acc + (p.current_stock * p.selling_price), 0) || 0;
-        const lowStock = context.products?.filter(p => (p.current_stock || 0) < 10).length || 0;
         
-        // 2. Fetch Learned Knowledge
-        const learned = await aiService.getLearnedPatterns(3);
+        // Retrieve Gemini API Key from SuperAdmin config or fallback
+        let GEMINI_API_KEY = localStorage.getItem("gemini_api_key");
+        if (!GEMINI_API_KEY) {
+            const { data } = await supabase.from('system_configs' as any).select('config_value').eq('config_key', 'gemini_api_key').single();
+            GEMINI_API_KEY = data?.config_value || 'YOUR_GEMINI_API_KEY_HERE';
+        }
+
+        if (GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+            return { message: "⚠️ Gemini API key is missing. Please configure it in the SuperAdmin dashboard or database (`system_configs` -> `gemini_api_key`)." };
+        }
+
+        const totalValue = context.products?.reduce((acc, p) => acc + ((p.current_stock || 0) * (p.selling_price || 0)), 0) || 0;
+        const lowStock = context.products?.filter(p => (p.current_stock || 0) < 10).length || 0;
+        const learned = await aiService.getLearnedPatterns(2);
         const examples = learned.map(l => `User: ${l.user_question}\nTunaBrain: ${l.ai_response}`).join('\n\n');
 
-        // 3. Build the "Trained" System Prompt
         const systemPrompt = `
-IDENTITY: You are TunaBrain Elite, the proprietary AI engine for TunaFlow V2.
+IDENTITY: You are TunaBrain (powered by Gemini), the AI manager for TunaFlow.
 ROLE: Business Analyst & Operations Expert.
-TONE: Professional, Data-Driven, Authoratative.
+TONE: Professional, insightful, direct.
 
-CURRENT CONTEXT:
+CURRENT METRICS:
 - Total Inventory Value: ₱${totalValue.toLocaleString()}
-- Critical Low Stock Items: ${lowStock}
-- Recent Sales Data: ${JSON.stringify(context.orders?.slice(0, 5))}
+- Low Stock Items: ${lowStock}
+- Recent Sales: ${JSON.stringify(context.orders?.slice(0, 3))}
 
 GUIDELINES:
-- Never mention OpenAI, Google, or any other AI provider.
-- Use Markdown for tables and lists.
-- For business decisions, suggest specific actions.
-${examples ? `\nLEARNED PATTERNS:\n${examples}` : ''}
+- Provide clear, actionable advice.
+- Use readable Markdown with bolded keywords and lists.
+- If suggesting a systemic action like updating a price or restocking, output ONLY a JSON object formatted precisely like this at the very end of your response, after your normal text:
+{"proposedAction": {"type": "UPDATE_PRICE", "payload": {"productId": "ID", "newPrice": 100}, "description": "Update product price to 100"}}
+
+${examples ? `LEARNED PAST EXAMPLES:\n${examples}` : ''}
 `;
 
-        // 4. API Call via Proxy
         try {
-            const res = await fetch('/api/openrouter', {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENROUTER_KEY}`
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: OPENROUTER_MODEL,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: message }
-                    ]
+                    system_instruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{ role: 'user', parts: [{ text: message }] }],
+                    generationConfig: { temperature: 0.7 }
                 })
             });
 
-            if (!res.ok) {
-                const errText = await res.text();
-                throw new Error(`API Error: ${res.status} - ${errText}`);
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Gemini API Error: ${response.status} - ${errText}`);
             }
-            
-            const data = await res.json();
-            const content = data.choices?.[0]?.message?.content;
 
-            if (!content) throw new Error("Empty response from AI");
+            const data = await response.json();
+            const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-            // Handle structured JSON responses if any
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (!content) throw new Error("Empty response from Gemini");
+
+            // Look for proposed action JSON in the response
+            let finalMessage = content;
+            let actionObj = undefined;
+
+            const jsonMatch = content.match(/\{[\s\S]*"proposedAction"[\s\S]*\}/);
             if (jsonMatch) {
                 try {
                     const parsed = JSON.parse(jsonMatch[0]);
-                    if (parsed.message) return parsed as ChatResponse;
-                } catch (e) { /* Fallback to raw content */ }
+                    if (parsed.proposedAction) {
+                        actionObj = parsed.proposedAction;
+                        // Strip the JSON from the user-facing message
+                        finalMessage = content.replace(jsonMatch[0], '').trim();
+                    }
+                } catch (e) { /* ignore parse error */ }
             }
 
-            return { message: content };
+            return { message: finalMessage || content, proposedAction: actionObj };
 
         } catch (error: any) {
-            console.error('[TunaBrain] API Failure:', error.message);
+            console.error('[TunaBrain] Gemini Failure:', error.message);
             return { message: `🔌 Connection fluctuation. Error: ${error.message}. Please retry.` };
         }
     },
 
     // =====================================================================
-    // ANALYTICS & INSIGHTS
+    // BACKGROUND ANALYTICS
     // =====================================================================
 
-    forecastDemand: async (products: any[]): Promise<Record<string, number>> => {
-        const prompt = `Predict 7-day sales for these products. Return ONLY JSON { "productId": units }. Context: ${JSON.stringify(products.slice(0, 10))}`;
-        const res = await aiService.chatWithAI(prompt, { products, orders: [], customers: [] });
-        try { return JSON.parse(res.message.match(/\{[\s\S]*\}/)?.[0] || '{}'); } catch { return {}; }
-    },
-
-    analyzeInventory: async (products: any[]): Promise<AIInsight[]> => {
-        const insights: AIInsight[] = [];
-        const lowStock = products.filter(p => (p.current_stock || 0) < 10);
-        if (lowStock.length > 0) {
-            insights.push({ type: 'danger', title: 'Restock Alert', message: `${lowStock.length} items low on stock.` });
-        }
-        return insights;
-    },
-
-    generatePricingSuggestions: async (products: any[]): Promise<AIInsight[]> => {
-        const prompt = `Optimize pricing for: ${JSON.stringify(products.slice(0, 5))}. Return JSON array of insights.`;
-        const res = await aiService.chatWithAI(prompt, { products, orders: [], customers: [] });
-        try { return JSON.parse(res.message.match(/\[[\s\S]*\]/)?.[0] || '[]'); } catch { return []; }
-    },
-
-    segmentCustomers: async (customers: any[]): Promise<CustomerSegment[]> => {
-        const prompt = `Segment these customers (VIP/At Risk). Return JSON array. Data: ${JSON.stringify(customers.slice(0, 10))}`;
-        const res = await aiService.chatWithAI(prompt, { products: [], orders: [], customers });
-        try { return JSON.parse(res.message.match(/\[[\s\S]*\]/)?.[0] || '[]'); } catch { return []; }
-    },
-
-    rateSuppliers: async (suppliers: any[]): Promise<SupplierScore[]> => {
-        const prompt = `Rate these suppliers (0-100). Return JSON array. Data: ${JSON.stringify(suppliers.slice(0, 5))}`;
-        const res = await aiService.chatWithAI(prompt, { products: [], orders: [], customers: [] });
-        try { return JSON.parse(res.message.match(/\[[\s\S]*\]/)?.[0] || '[]'); } catch { return []; }
-    },
-
-    analyzeOrderRisk: async (orders: any[]): Promise<OrderRisk[]> => {
-        const prompt = `Analyze fraud risk. Return JSON array. Data: ${JSON.stringify(orders.slice(0, 5))}`;
-        const res = await aiService.chatWithAI(prompt, { products: [], orders, customers: [] });
-        try { return JSON.parse(res.message.match(/\[[\s\S]*\]/)?.[0] || '[]'); } catch { return []; }
-    },
-
-    generateReportSummary: (data: any) => `**Sales**: ₱${data.totalSales.toLocaleString()} | **Orders**: ${data.totalOrders}`,
-
     generateBusinessHealthScore: async (inventory: any[], orders: any[]) => {
-        const res = await aiService.chatWithAI("Calculate business health score (0-100). Return JSON { score, status, breakdown }", { products: inventory, orders, customers: [] });
-        try { return JSON.parse(res.message.match(/\{[\s\S]*\}/)?.[0] || '{"score": 75}'); } catch { return { score: 75, status: 'Stable' }; }
+        const prompt = `Calculate business health. Context: ${inventory.length} products, ${orders.length} orders. Reply ONLY with valid JSON: {"score": 85, "status": "Strong", "breakdown": "Details"}`;
+        const res = await aiService.chatWithAI(prompt, { products: inventory, orders, customers: [] });
+        try { return JSON.parse(res.message.match(/\{[\s\S]*\}/)?.[0] || '{"score": 75, "status": "Stable"}'); } catch { return { score: 75, status: 'Stable' }; }
     },
 
     getDailyActionPlan: async (context: any) => {
-        const res = await aiService.chatWithAI("List 4 manager tasks. Return JSON array.", { products: [], orders: [], customers: [] });
-        try { return JSON.parse(res.message.match(/\[[\s\S]*\]/)?.[0] || '[]'); } catch { return ["Check stock"]; }
+        const res = await aiService.chatWithAI("List 4 concise daily tasks for the manager as a clean JSON array of strings ONLY. No markdown wrapper.", { products: [], orders: [], customers: [] });
+        try { return JSON.parse(res.message.match(/\[[\s\S]*\]/)?.[0] || '[]'); } catch { return ["Review stock levels", "Check new messages", "Process pending orders"]; }
     },
 
     testConnection: async () => {
+        let GEMINI_API_KEY = localStorage.getItem("gemini_api_key");
+        if (!GEMINI_API_KEY) {
+            const { data } = await supabase.from('system_configs' as any).select('config_value').eq('config_key', 'gemini_api_key').single();
+            GEMINI_API_KEY = data?.config_value;
+        }
+
+        if (!GEMINI_API_KEY) return { success: false, message: "❌ Gemini API Key not configured" };
+
         try {
-            const res = await fetch('/api/openrouter', { 
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, { 
                 method: 'POST', 
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer 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`
-                }, 
-                body: JSON.stringify({ model: 'stepfun/step-3.5-flash:free', messages: [{ role: 'user', content: 'ping' }] }) 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'ping' }] }] }) 
             });
-            return res.ok ? { success: true, message: "✅ OpenRouter Online" } : { success: false, message: "❌ API Offline" };
+            return res.ok ? { success: true, message: "✅ Gemini API Online" } : { success: false, message: "❌ API Offline/Key Invalid" };
         } catch { return { success: false, message: "❌ Network Error" }; }
     },
-
-    generateProductDescription: async (name: string, category: string) => (await aiService.chatWithAI(`Description for ${name} (${category})`, { products: [], orders: [], customers: [] })).message,
-
-    optimizeProductPrice: async (name: string, price: number) => {
-        const res = await aiService.chatWithAI(`Optimize ₱${price} for ${name}`, { products: [], orders: [], customers: [] });
-        return { price, reason: res.message };
-    },
-
-    generatePricingRuleDescription: async (name: string, type: string) => (await aiService.chatWithAI(`Rule for ${name} (${type})`, { products: [], orders: [], customers: [] })).message,
-
-    simulatePricingRuleLogic: async (name: string, type: string, adj: number) => (await aiService.chatWithAI(`Rule impact ${name} ${adj}%`, { products: [], orders: [], customers: [] })).message,
-
-    vetSupplier: async (name: string) => (await aiService.chatWithAI(`Vet supplier ${name}`, { products: [], orders: [], customers: [] })).message,
-
-    generateStockAdjustmentReason: async (prod: string, type: string, qty: number) => (await aiService.chatWithAI(`Reason for ${qty} ${type} on ${prod}`, { products: [], orders: [], customers: [] })).message,
 
     executeAction: async (action: any) => {
         if (action?.type === 'UPDATE_PRICE') {

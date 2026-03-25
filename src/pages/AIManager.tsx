@@ -13,7 +13,9 @@ import {
   Menu, 
   X,
   Sparkles,
-  Activity
+  Activity,
+  KeyRound,
+  CheckCircle2
 } from "lucide-react";
 import { useAI } from "@/contexts/AIContext";
 import ReactMarkdown from 'react-markdown';
@@ -28,6 +30,10 @@ const AIManager = () => {
   const isMobileLayout = useIsMobileLayout();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobileLayout);
+  
+  // Gemini Key State
+  const [hasApiKey, setHasApiKey] = useState(!!localStorage.getItem("gemini_api_key"));
+  const [apiKeyValue, setApiKeyValue] = useState("");
 
   const {
     messages,
@@ -53,7 +59,6 @@ const AIManager = () => {
   const [isStockAdjFormOpen, setIsStockAdjFormOpen] = useState(false);
   const [stockAdjFormData, setStockAdjFormData] = useState<any>(undefined);
 
-  // Auto-scroll logic
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -61,41 +66,47 @@ const AIManager = () => {
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
     }
-  }, [messages, isTyping]);
+  }, [messages, isTyping, hasApiKey]);
+
+  const saveApiKey = () => {
+    if (apiKeyValue.trim()) {
+      localStorage.setItem("gemini_api_key", apiKeyValue.trim());
+      setHasApiKey(true);
+    }
+  };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-zinc-50 text-slate-800 overflow-hidden m-0 p-0 font-sans tracking-tight animate-in fade-in duration-300">
+    <div className="flex h-[calc(100vh-4rem)] bg-[#f8f9fa] text-[#202124] overflow-hidden m-0 p-0 font-sans tracking-tight animate-in fade-in duration-300">
       
       {/* Sidebar: Chat History */}
       <aside className={`
-        ${isSidebarOpen ? 'w-64 border-r border-zinc-200' : 'w-0 overflow-hidden border-0'} 
-        flex flex-col bg-white transition-all duration-200 ease-in-out z-50
+        ${isSidebarOpen ? 'w-72 border-r bg-[#f0f4f8]/50 border-[#e1e5ea]' : 'w-0 overflow-hidden border-0'} 
+        flex flex-col transition-all duration-300 ease-in-out z-50 backdrop-blur-xl
       `}>
-        <div className="p-4 flex flex-col h-full gap-4">
+        <div className="p-4 flex flex-col h-full gap-5">
           <Button 
             onClick={createNewSession}
-            variant="outline"
-            className="w-full justify-between hover:bg-zinc-100 hover:text-slate-900 border-zinc-200 shadow-sm rounded-xl py-6"
+            className="w-full justify-start gap-3 bg-white hover:bg-white/60 text-[#1a73e8] border border-[#e1e5ea] shadow-sm rounded-2xl py-6 hover:shadow-md transition-all font-medium text-[15px]"
           >
-            <span className="font-semibold">New Chat</span>
-            <Plus className="h-4 w-4" />
+            <Plus className="h-5 w-5" />
+            New Thread
           </Button>
 
           <div className="flex-1 overflow-y-auto no-scrollbar pt-2">
-            <p className="text-xs font-semibold text-zinc-500 mb-3 px-2">Recents</p>
+            <p className="text-[11px] font-bold text-[#5f6368] mb-3 px-3 uppercase tracking-wider">Recent Activity</p>
             <div className="space-y-1">
               {chatSessions.map((session) => (
                 <div 
                   key={session.id}
                   onClick={() => setCurrentSessionId(session.id)}
                   className={`
-                    flex items-center gap-3 p-3 rounded-xl text-sm cursor-pointer group transition-colors
-                    ${currentSessionId === session.id ? 'bg-indigo-50 text-indigo-700 font-medium' : 'hover:bg-zinc-100 text-zinc-600'}
+                    flex items-center gap-3 p-3 rounded-2xl text-[14px] cursor-pointer group transition-all
+                    ${currentSessionId === session.id ? 'bg-[#e8f0fe] text-[#1967d2] font-semibold' : 'hover:bg-[#e8eaed] text-[#3c4043] font-medium'}
                   `}
                 >
-                  <MessageSquare className="h-4 w-4 shrink-0" />
-                  <span className="truncate flex-1">{session.last_message || "Initialize..."}</span>
-                  <button onClick={(e) => deleteSession(e, session.id)} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-opacity">
+                  <MessageSquare className={`h-4 w-4 shrink-0 ${currentSessionId === session.id ? 'text-[#1967d2]' : 'text-[#80868b]'}`} />
+                  <span className="truncate flex-1 tracking-tight">{session.last_message || "TunaBrain Thread..."}</span>
+                  <button onClick={(e) => deleteSession(e, session.id)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-[#fce8e6] hover:text-[#d93025] rounded-lg transition-all">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -104,17 +115,17 @@ const AIManager = () => {
           </div>
 
           {healthScore && (
-            <div className="p-4 rounded-xl border border-zinc-100 bg-zinc-50/50 shadow-sm mt-auto">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-zinc-500">System Health</span>
-                <span className={`text-sm font-bold ${healthScore.score > 80 ? 'text-green-600' : 'text-blue-600'}`}>
+            <div className="p-5 rounded-3xl bg-white border border-[#e1e5ea] shadow-sm mt-auto">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[12px] font-bold text-[#5f6368] uppercase tracking-wider">System Health</span>
+                <span className={`text-[15px] font-black ${healthScore.score > 80 ? 'text-[#1e8e3e]' : 'text-[#f29900]'}`}>
                   {healthScore.score}%
                 </span>
               </div>
-              <div className="h-2 w-full bg-zinc-200 rounded-full overflow-hidden">
+              <div className="h-2.5 w-full bg-[#f1f3f4] rounded-full overflow-hidden">
                 <div 
                   style={{ width: `${healthScore.score}%` }} 
-                  className={`h-full rounded-full transition-all duration-1000 ${healthScore.score > 80 ? 'bg-green-500' : 'bg-blue-500'}`}
+                  className={`h-full rounded-full transition-all duration-1000 ${healthScore.score > 80 ? 'bg-gradient-to-r from-[#1e8e3e] to-[#34a853]' : 'bg-gradient-to-r from-[#f29900] to-[#fbbc05]'}`}
                 />
               </div>
             </div>
@@ -123,122 +134,160 @@ const AIManager = () => {
       </aside>
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col min-w-0 bg-white items-center relative shadow-[-10px_0_30px_rgba(0,0,0,0.02)]">
+      <main className="flex-1 flex flex-col min-w-0 bg-white items-center relative">
         
         {/* Top Navigation */}
-        <nav className="w-full flex items-center justify-between p-4 border-b border-zinc-100 bg-white/50 backdrop-blur-md z-10 absolute top-0">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="rounded-full hover:bg-zinc-100 text-zinc-500">
-              {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        <nav className="w-full flex items-center justify-between p-4 bg-white/80 backdrop-blur-2xl z-20 absolute top-0 border-b border-[#f1f3f4]">
+          <div className="flex items-center gap-4 py-1">
+            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="rounded-full hover:bg-[#f1f3f4] text-[#5f6368] h-11 w-11">
+              {isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-indigo-100 rounded-lg">
-                <Sparkles className="h-4 w-4 text-indigo-600" />
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-gradient-to-tr from-[#1a73e8] to-[#8ab4f8] rounded-xl shadow-sm">
+                <Sparkles className="h-5 w-5 text-white" />
               </div>
-              <h1 className="text-base font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                TunaBrain
+              <h1 className="text-[18px] font-bold tracking-tight text-[#202124]">
+                TunaBrain <span className="text-[#1a73e8] font-black">Gemini</span>
               </h1>
             </div>
           </div>
+          
+          <div className="flex items-center gap-3 bg-[#e8f0fe] py-1.5 px-3 rounded-full border border-[#d2e3fc]">
+             <div className="h-2 w-2 rounded-full bg-[#1e8e3e]" />
+             <span className="text-[11px] font-bold text-[#1967d2] uppercase tracking-wider hidden sm:block">Gemini 2.5 Flash</span>
+          </div>
         </nav>
 
-        {/* Chat Thread */}
-        <ScrollArea ref={scrollAreaRef} className="flex-1 w-full max-w-3xl overflow-y-auto px-4 pt-20">
-          <div className="py-8 space-y-8">
-            {messages.map((msg) => (
-              <div key={msg.id} className="flex gap-4 sm:gap-6 group animate-in slide-in-from-bottom-2 duration-300">
-                
-                {/* Avatar */}
-                <div className={`mt-0.5 shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-2xl flex items-center justify-center shadow-sm 
-                  ${msg.role === 'user' ? 'bg-zinc-100 text-zinc-600' : 'bg-gradient-to-tr from-indigo-500 to-purple-500 text-white'}`}
-                >
-                  {msg.role === 'user' ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
-                </div>
-
-                {/* Message Content */}
-                <div className="flex-1 space-y-2 max-w-[calc(100%-3rem)]">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xs font-bold text-slate-700">{msg.role === 'user' ? 'You' : 'TunaBrain'}</span>
-                    <span className="text-[10px] text-zinc-400 font-medium">{msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-                  
-                  <div className={`text-[15px] leading-relaxed prose prose-zinc max-w-none 
-                    ${msg.role === 'user' ? 'bg-zinc-100/50 px-4 py-3 rounded-2xl rounded-tl-sm inline-block text-slate-800' : 'text-slate-700'}`}
-                  >
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {msg.content}
-                    </ReactMarkdown>
-                  </div>
-
-                  {/* Executable Actions */}
-                  {msg.action && msg.role === 'assistant' && (
-                    <div className="mt-4 border border-indigo-100 p-5 bg-indigo-50/50 rounded-2xl shadow-sm">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Activity className="h-4 w-4 text-indigo-600" />
-                        <span className="text-sm font-bold text-indigo-900">Suggested Action: {msg.action.type.replace('_', ' ')}</span>
-                      </div>
-                      <p className="text-sm mb-5 text-indigo-800/80">{msg.action.description}</p>
-                      
-                      {msg.actionStatus === 'pending' && (
-                        <div className="flex flex-wrap gap-2">
-                          <Button onClick={() => handleAction(msg.id, msg.action, true)} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-6">
-                            Approve & Execute
-                          </Button>
-                          <Button variant="outline" onClick={() => handleAction(msg.id, msg.action, false)} className="rounded-xl border-zinc-300 text-zinc-600 hover:bg-zinc-100">
-                            Dismiss
-                          </Button>
-                        </div>
-                      )}
-                      
-                      {msg.actionStatus === 'completed' && (
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold">
-                          <div className="h-2 w-2 rounded-full bg-green-500" /> Action Completed
-                        </div>
-                      )}
-                      {msg.actionStatus === 'rejected' && (
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-100 text-zinc-500 rounded-lg text-xs font-semibold">
-                          Dismissed
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {/* Typing Indicator */}
-            {isTyping && (
-              <div className="flex gap-4 sm:gap-6 animate-pulse">
-                <div className="mt-0.5 h-8 w-8 sm:h-10 sm:w-10 rounded-2xl bg-gradient-to-tr from-indigo-500/50 to-purple-500/50 flex items-center justify-center text-white/80">
-                  <Bot className="h-5 w-5" />
-                </div>
-                <div className="flex flex-col justify-center">
-                  <div className="flex gap-1.5 items-center h-8 px-4 bg-zinc-50 rounded-2xl rounded-tl-sm w-fit">
-                    <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" />
-                    <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce [animation-delay:0.2s]" />
-                    <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce [animation-delay:0.4s]" />
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Bottom Padding */}
-            <div className="h-4"></div>
+        {!hasApiKey ? (
+          /* API Setup Screen */
+          <div className="flex-1 w-full max-w-2xl px-4 flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-500">
+             <div className="h-20 w-20 rounded-3xl bg-gradient-to-tr from-[#1a73e8] to-[#ceead6] flex items-center justify-center shadow-xl mb-8 transform -rotate-3">
+               <KeyRound className="h-10 w-10 text-white" />
+             </div>
+             <h2 className="text-3xl font-black text-[#202124] mb-4 tracking-tight">Activate TunaBrain Gemini</h2>
+             <p className="text-[#5f6368] mb-8 text-lg font-medium leading-relaxed max-w-lg">
+               To power this AI for free, securely provide your <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[#1a73e8] hover:underline underline-offset-4 font-bold">Google Gemini API Key</a>. It is stored locally on your device.
+             </p>
+             <div className="w-full max-w-md flex flex-col sm:flex-row gap-3">
+                <Input 
+                  value={apiKeyValue}
+                  onChange={(e) => setApiKeyValue(e.target.value)}
+                  placeholder="Paste AI key 'AIzaSy...'"
+                  className="h-14 rounded-2xl border-[#dadce0] focus-visible:ring-[#1a73e8] px-5 text-[15px]"
+                />
+                <Button onClick={saveApiKey} className="h-14 px-8 rounded-2xl bg-[#1a73e8] hover:bg-[#1557b0] text-white shadow-lg shadow-blue-500/20 font-bold text-[15px]">
+                  Initialize
+                </Button>
+             </div>
           </div>
-        </ScrollArea>
+        ) : (
+          /* Chat Interface */
+          <ScrollArea ref={scrollAreaRef} className="flex-1 w-full max-w-4xl overflow-y-auto px-4 sm:px-8 pt-24 pb-4">
+            <div className="py-6 space-y-10 min-h-full">
+              {messages.length === 1 && messages[0].id === 'init' && (
+                 <div className="flex flex-col items-center justify-center mt-20 mb-32 text-center animate-in fade-in slide-in-from-bottom-5 duration-700">
+                    <div className="h-24 w-24 rounded-[2rem] bg-gradient-to-tr from-[#1a73e8] via-[#8ab4f8] to-[#ceead6] p-1 mb-6 shadow-2xl shadow-blue-500/10">
+                       <div className="h-full w-full bg-white rounded-[1.8rem] flex items-center justify-center">
+                          <Sparkles className="h-10 w-10 text-[#1a73e8]" />
+                       </div>
+                    </div>
+                    <h2 className="text-3xl sm:text-4xl font-black text-[#202124] tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#202124] to-[#5f6368]">
+                       How can I help you today?
+                    </h2>
+                 </div>
+              )}
 
-        {/* Input Form */}
-        <div className="w-full max-w-3xl p-4 md:px-8 pb-6 md:pb-8 bg-gradient-to-t from-white via-white to-transparent z-10 pt-10">
-          <div className="relative">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex gap-4 sm:gap-6 group animate-in slide-in-from-bottom-3 duration-500 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                  
+                  {/* Avatar */}
+                  <div className={`mt-0.5 shrink-0 h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center shadow-sm 
+                    ${msg.role === 'user' ? 'bg-[#f1f3f4] text-[#5f6368]' : 'bg-gradient-to-tr from-[#1a73e8] to-[#8ab4f8] text-white'}`}
+                  >
+                    {msg.role === 'user' ? <User className="h-5 w-5" /> : <Sparkles className="h-6 w-6" />}
+                  </div>
+
+                  {/* Message Content */}
+                  <div className={`flex-1 space-y-3 ${msg.role === 'user' ? 'flex flex-col items-end max-w-[85%]' : 'max-w-[calc(100%-4rem)]'}`}>
+                    <div className={`text-[16px] leading-[1.7] prose prose-zinc max-w-none 
+                      ${msg.role === 'user' ? 'bg-[#f1f3f4] px-6 py-4 rounded-[2rem] rounded-tr-sm inline-block text-[#202124]' : 'text-[#3c4043]'}`}
+                    >
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+
+                    {/* Executable Actions */}
+                    {msg.action && msg.role === 'assistant' && (
+                      <div className="mt-5 border border-[#ceead6] p-6 bg-[#f6fbf7] rounded-3xl shadow-sm max-w-2xl">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-[#e6f4ea] rounded-full">
+                             <Activity className="h-5 w-5 text-[#1e8e3e]" />
+                          </div>
+                          <span className="text-[15px] font-bold text-[#0d652d]">System Proposal</span>
+                        </div>
+                        <p className="text-[16px] mb-6 text-[#137333] font-medium">{msg.action.description}</p>
+                        
+                        {msg.actionStatus === 'pending' && (
+                          <div className="flex flex-wrap gap-3">
+                            <Button onClick={() => handleAction(msg.id, msg.action, true)} className="bg-[#1e8e3e] hover:bg-[#137333] text-white rounded-2xl px-8 h-12 shadow-md shadow-green-500/20 text-[15px] font-bold">
+                              Execute Action
+                            </Button>
+                            <Button variant="outline" onClick={() => handleAction(msg.id, msg.action, false)} className="rounded-2xl border-[#dadce0] text-[#5f6368] hover:bg-[#f1f3f4] h-12 px-6 text-[15px] font-semibold">
+                              Dismiss
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {msg.actionStatus === 'completed' && (
+                          <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-[#e6f4ea] text-[#137333] rounded-xl text-[14px] font-bold">
+                            <CheckCircle2 className="h-5 w-5" /> Operation Verified
+                          </div>
+                        )}
+                        {msg.actionStatus === 'rejected' && (
+                          <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-[#f1f3f4] text-[#5f6368] rounded-xl text-[14px] font-semibold">
+                            Proposal Ignored
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Typing Indicator */}
+              {isTyping && (
+                <div className="flex gap-4 sm:gap-6 animate-pulse mt-4">
+                  <div className="mt-0.5 h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-tr from-[#1a73e8]/30 to-[#8ab4f8]/30 flex items-center justify-center text-white/80">
+                    <Sparkles className="h-5 w-5 text-[#1a73e8]" />
+                  </div>
+                  <div className="flex flex-col justify-center">
+                    <div className="flex gap-2 items-center h-10 px-5 bg-white border border-[#f1f3f4] rounded-[2rem] rounded-tl-sm w-fit shadow-sm">
+                      <div className="h-2 w-2 rounded-full bg-[#8ab4f8] animate-bounce" />
+                      <div className="h-2 w-2 rounded-full bg-[#8ab4f8] animate-bounce [animation-delay:0.2s]" />
+                      <div className="h-2 w-2 rounded-full bg-[#8ab4f8] animate-bounce [animation-delay:0.4s]" />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="h-10"></div>
+            </div>
+          </ScrollArea>
+        )}
+
+        {/* Input Form Floating - Gemini Style */}
+        {hasApiKey && (
+          <div className="w-full max-w-4xl p-4 sm:px-8 absolute bottom-0 z-30 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pb-6">
             <form 
               onSubmit={(e) => { e.preventDefault(); sendMessage(); }} 
-              className="relative flex items-end border border-zinc-200 bg-white rounded-3xl p-1 shadow-sm focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all overflow-hidden"
+              className="relative flex items-center bg-[#f1f3f4] rounded-[2rem] p-1.5 shadow-sm focus-within:ring-2 focus-within:ring-[#1a73e8]/30 focus-within:bg-white focus-within:shadow-md transition-all duration-300 border border-transparent focus-within:border-[#e8f0fe] overflow-hidden"
             >
               <Input 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Message TunaBrain..."
-                className="flex-1 border-none focus-visible:ring-0 rounded-l-3xl min-h-[52px] h-auto py-3 px-5 text-base shadow-none bg-transparent"
+                placeholder="Ask TunaBrain anything..."
+                className="flex-1 border-none focus-visible:ring-0 rounded-l-[2rem] min-h-[56px] py-4 px-6 text-[16px] shadow-none bg-transparent placeholder:text-[#80868b] font-medium"
                 disabled={isTyping}
                 autoComplete="off"
               />
@@ -246,25 +295,16 @@ const AIManager = () => {
                 type="submit" 
                 size="icon"
                 disabled={!input.trim() || isTyping}
-                className="h-10 w-10 mb-1.5 mr-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 transition-all shrink-0"
+                className="h-12 w-12 mr-1 rounded-full bg-[#1a73e8] hover:bg-[#1557b0] text-white disabled:opacity-40 disabled:bg-[#dadce0] transition-colors shrink-0 shadow-sm"
               >
-                <Send className="h-4 w-4 ml-0.5" />
+                <Send className="h-5 w-5 ml-0.5" />
               </Button>
             </form>
+            <p className="mt-3.5 text-[11px] text-[#80868b] text-center font-medium tracking-wide">
+              Gemini may produce inaccurate information about people, places, or facts.
+            </p>
           </div>
-          
-          <div className="mt-3 flex flex-wrap justify-center gap-2">
-            {["Analyze Inventory", "Sales Trends", "Forecast Demand"].map(suggestion => (
-              <button 
-                key={suggestion}
-                onClick={() => setInput(suggestion)}
-                className="text-[11px] font-medium text-zinc-500 bg-zinc-50 hover:bg-indigo-50 hover:text-indigo-600 border border-zinc-200 rounded-full px-3 py-1 transition-colors"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
       </main>
 
