@@ -7,6 +7,7 @@ export interface ChatResponse {
     proposedAction?: {
         type: 'UPDATE_PRICE' | 'RESTOCK_ITEM' | 'GENERAL_ADVICE';
         payload: any;
+        description: string;
     };
 }
 
@@ -253,3 +254,5 @@ ${examples ? `\nLEARNED PATTERNS:\n${examples}` : ''}
         return { success: true };
     }
 };
+
+export default aiService;
