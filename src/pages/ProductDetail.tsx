@@ -31,6 +31,13 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setCurrentUser(session?.user || null);
+    });
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -76,11 +83,13 @@ const ProductDetail = () => {
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product) return;
 
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const existingItem = cart.find((item: any) => item.id === product.id);
+
+    let isNewAddition = false;
 
     if (existingItem) {
       if (existingItem.quantity + quantity > product.current_stock) {
@@ -89,6 +98,7 @@ const ProductDetail = () => {
       }
       existingItem.quantity += quantity;
     } else {
+      isNewAddition = true;
       cart.push({
         ...product,
         quantity,
@@ -102,6 +112,20 @@ const ProductDetail = () => {
     localStorage.setItem("cart", JSON.stringify(cart));
     window.dispatchEvent(new Event("cartUpdated"));
     toast.success("Added to cart");
+
+    // Automatically send a message to the seller if the user is logged in
+    // and this is the first time the item is added to cart (to avoid spam)
+    if (isNewAddition && currentUser && product.user_id) {
+      try {
+        await supabase.from('messages').insert({
+          sender_id: currentUser.id,
+          receiver_id: product.user_id,
+          content: `Hi, I'm interested in ${product.name} (Qty: ${quantity}). I just added it to my cart!`,
+        });
+      } catch (error) {
+        console.error("Error sending auto-message to seller:", error);
+      }
+    }
   };
 
   if (loading) {
