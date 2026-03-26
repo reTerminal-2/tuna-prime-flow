@@ -79,11 +79,11 @@ const ensureGeminiInitialized = async () => {
         
         console.log(`[TunaBrain] Initializing Gemini with model: ${modelName} (Stable v1)`);
         
-        // Use standard stable model identifiers
+        // Force v1 API version to avoid the v1beta 404 issue
         geminiModel = genAIInstance.getGenerativeModel({ 
             model: modelName,
             generationConfig: { temperature: 0.7 }
-        });
+        }, { apiVersion: "v1" });
         return true;
     } catch (e) {
         console.error('[TunaBrain] Initialization failed:', e);
