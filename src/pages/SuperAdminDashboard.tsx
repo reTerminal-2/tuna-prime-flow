@@ -747,7 +747,7 @@ export default function SuperAdminDashboard() {
                                               </SelectTrigger>
                                               <SelectContent>
                                                     <SelectItem value="stepfun/step-3.5-flash:free">Step-3.5-Flash (Free reasoning)</SelectItem>
-                                                    <SelectItem value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</SelectItem><SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (Standard)</SelectItem><SelectItem value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest)</SelectItem><SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (Standard)</SelectItem>
+                                                    <SelectItem value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</SelectItem><SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash (Production 2026)</SelectItem><SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (Standard)</SelectItem><SelectItem value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest)</SelectItem><SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (Standard)</SelectItem>
                                                     <SelectItem value="google/gemini-2.0-pro-exp-02-05:free">Gemini 2.0 Pro (Free)</SelectItem>
                                                     <SelectItem value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (Free)</SelectItem>
                                                     <SelectItem value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free)</SelectItem>

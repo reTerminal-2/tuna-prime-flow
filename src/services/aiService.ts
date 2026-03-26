@@ -71,15 +71,15 @@ const ensureGeminiInitialized = async () => {
             .eq('config_key', 'openai_model')
             .maybeSingle();
 
-        // Default to a known stable model if not configured
-        const modelName = modelResponse.data?.config_value || "gemini-1.5-flash";
+        // Upgraded to Gemini 2.5 Flash (Production 2026)
+        const modelName = modelResponse.data?.config_value || "gemini-2.5-flash";
         
         GEMINI_API_KEY = data.config_value;
         const genAIInstance = new GoogleGenerativeAI(GEMINI_API_KEY);
         
-        console.log(`[TunaBrain] Initializing Gemini with model: ${modelName} (Stable v1)`);
+        console.log(`[TunaBrain] Initializing with latest: ${modelName} (Stable v1)`);
         
-        // Force v1 API version to avoid the v1beta 404 issue
+        // Force v1 API version as it now supports 2.5-flash
         geminiModel = genAIInstance.getGenerativeModel({ 
             model: modelName,
             generationConfig: { temperature: 0.7 }
