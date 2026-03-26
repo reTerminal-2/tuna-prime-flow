@@ -64,6 +64,7 @@ export default function SuperAdminDashboard() {
     const [g4fModel, setG4fModel] = useState('stepfun/step-3.5-flash:free');
     const [g4fVmUrl, setG4fVmUrl] = useState('');
     const [openaiKey, setOpenaiKey] = useState("");
+    const [geminiKey, setGeminiKey] = useState("");
     const [systemPrompt, setSystemPrompt] = useState("");
     const [testingAI, setTestingAI] = useState(false);
     const [savingAI, setSavingAI] = useState(false);
@@ -104,13 +105,14 @@ export default function SuperAdminDashboard() {
                 const promptConfig = (configs as any[]).find(c => c.config_key === 'system_prompt');
                 const modelConfig = (configs as any[]).find(c => c.config_key === 'openai_model');
                 const providerConfig = (configs as any[]).find(c => c.config_key === 'ai_provider');
-                const psidtsConfig = (configs as any[]).find(c => c.config_key === 'gemini_psidts');
+                const geminiConfig = (configs as any[]).find(c => c.config_key === 'gemini_api_key');
  
                 if (openaiConfig) setOpenaiKey(openaiConfig.config_value);
                 if (vpsConfig) setG4fVmUrl(vpsConfig.config_value);
                 if (promptConfig) setSystemPrompt(promptConfig.config_value);
                 if (modelConfig) setG4fModel(modelConfig.config_value);
                 if (providerConfig) setAiProvider(providerConfig.config_value);
+                if (geminiConfig) setGeminiKey(geminiConfig.config_value);
             }
         } catch (error) {
             console.error('Error loading AI settings from DB:', error);
@@ -209,7 +211,8 @@ export default function SuperAdminDashboard() {
                 { config_key: 'vps_url', config_value: g4fVmUrl, updated_at: new Date().toISOString() },
                 { config_key: 'system_prompt', config_value: systemPrompt, updated_at: new Date().toISOString() },
                 { config_key: 'openai_model', config_value: g4fModel, updated_at: new Date().toISOString() },
-                { config_key: 'ai_provider', config_value: aiProvider, updated_at: new Date().toISOString() }
+                { config_key: 'ai_provider', config_value: aiProvider, updated_at: new Date().toISOString() },
+                { config_key: 'gemini_api_key', config_value: geminiKey, updated_at: new Date().toISOString() }
             ];
 
             const { error } = await supabase
@@ -670,19 +673,17 @@ export default function SuperAdminDashboard() {
                                         <Label className="text-sm font-medium">Primary Intelligence Provider</Label>
                                         <Select value={aiProvider} onValueChange={setAiProvider}>
                                             <SelectTrigger className="w-full bg-slate-800">
-                                                <SelectValue placeholder="Select Auth Mode" />
+                                                <SelectValue placeholder="Select Provider" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="openrouter">OpenRouter (Free + Reasoning Models)</SelectItem>
-                                              <SelectItem value="pro_no_vps">ChatGPT Pro (Session Token - NO API KEY)</SelectItem>
-                                              <SelectItem value="vps">TunaBrain Pro (Standard VPS)</SelectItem>
-                                              <SelectItem value="openai">OpenAI Legacy (API Key Mode)</SelectItem>
+                                                <SelectItem value="gemini">Google Gemini (Native SDK)</SelectItem>
+                                                <SelectItem value="openrouter">OpenRouter (Free + Reasoning)</SelectItem>
+                                                <SelectItem value="vps">TunaBrain Pro (VPS)</SelectItem>
+                                                <SelectItem value="openai">OpenAI Legacy (API Key)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <p className="text-[10px] text-muted-foreground">
-                                            {aiProvider === 'pro_no_vps'
-                                                ? "TunaBrain will use your ChatGPT Pro Account session via our secure Netlify bridge."
-                                                : aiProvider === 'openrouter'
+                                            {aiProvider === 'gemini' ? "Powerful: Direct integration with Google's Gemini Flash 1.5 via official SDK." : aiProvider === 'openrouter'
                                                     ? "Recommended: Uses free, high-performance models from OpenRouter."
                                                     : aiProvider === 'vps'
                                                         ? "Advanced: Routes traffic through your private server relay."
@@ -692,26 +693,25 @@ export default function SuperAdminDashboard() {
 
                                       <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
                                           <Label className="text-sm font-medium">
-                                              {aiProvider === 'openai' ? 'Legacy OpenAI API Key' : 
+                                              {aiProvider === 'gemini' ? 'Google Gemini API Key' :
+                                               aiProvider === 'openai' ? 'Legacy OpenAI API Key' : 
                                                aiProvider === 'openrouter' ? 'OpenRouter API Key' :
                                                'ChatGPT Session Token (Optional for VPS)'}
                                           </Label>
                                           <div className="relative">
                                               <Input
                                                   type="password"
-                                                  placeholder={aiProvider === 'openai' ? "sk-..." : "eyJhbG.. (Your browser cookie)"}
-                                                  value={openaiKey}
-                                                  onChange={(e) => setOpenaiKey(e.target.value)}
+                                                  placeholder={aiProvider === 'gemini' ? "AIzaSy..." : aiProvider === 'openai' ? "sk-..." : "eyJhbG.. (Your browser cookie)"}
+                                                  value={aiProvider === 'gemini' ? geminiKey : openaiKey}
+                                                  onChange={(e) => aiProvider === 'gemini' ? setGeminiKey(e.target.value) : setOpenaiKey(e.target.value)}
                                                   className="bg-muted/30 pr-10"
                                               />
                                             <div className="absolute right-3 top-2.5">
-                                                  <Zap className={`w-4 h-4 ${openaiKey ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                                                  <Zap className={`w-4 h-4 ${(aiProvider === 'gemini' ? geminiKey : openaiKey) ? 'text-yellow-500' : 'text-muted-foreground'}`} />
                                               </div>
                                           </div>
                                           <p className="text-[10px] text-muted-foreground">
-                                              {aiProvider === 'openai'
-                                                  ? "Standard API billing will apply."
-                                                  : aiProvider === 'openrouter'
+                                              {aiProvider === 'gemini' ? "Generate your free key at AI Studio (aistudio.google.com)." : aiProvider === 'openai' ? "Standard API billing will apply." : aiProvider === 'openrouter'
                                                       ? "Paste your OpenRouter API key here. Reasoning models are supported."
                                                       : "Paste your session token here if required by your VPS provider selection."}
                                           </p>

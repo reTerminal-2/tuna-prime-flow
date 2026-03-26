@@ -41,19 +41,43 @@ export interface OrderRisk {
 }
 
 // -------------------------------------------------------------------------
-// HARDCODED API KEY AS REQUESTED BY USER
+// DYNAMIC API KEY INITIALIZATION (Protected via Supabase)
 // -------------------------------------------------------------------------
-const GEMINI_API_KEY = "AIzaSyATnz4hqzdVO7m7a76Teh3dfhn4NUrRz4E";
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+let GEMINI_API_KEY: string | null = null;
+let genAI: GoogleGenerativeAI | null = null;
+let geminiModel: any = null;
 
-// Use the requested model
-// Note: SDK automatically manages endpoint mapping (v1beta/models/...)
-const geminiModel = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash", // Using 1.5-flash as it's the stable supported identifier in standard SDK for fast completion
-    generationConfig: {
-        temperature: 0.7,
+const ensureGeminiInitialized = async () => {
+    if (genAI && geminiModel) return true;
+
+    try {
+        const response: any = await supabase
+            .from('system_configs' as any)
+            .select('config_value')
+            .eq('config_key', 'gemini_api_key')
+            .maybeSingle();
+
+        const data = response.data;
+        const error = response.error;
+
+        if (error || !data?.config_value) {
+            console.warn('[TunaBrain] API Key not found in system_configs, falling back to empty state.');
+            return false;
+        }
+
+        GEMINI_API_KEY = data.config_value;
+        genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        // SDK manages v1beta/models/... endpoint routing
+        geminiModel = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash", 
+            generationConfig: { temperature: 0.7 }
+        });
+        return true;
+    } catch (e) {
+        console.error('[TunaBrain] Initialization failed:', e);
+        return false;
     }
-});
+};
 
 export const aiService = {
 
@@ -91,6 +115,11 @@ export const aiService = {
 
     chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
         
+        const isReady = await ensureGeminiInitialized();
+        if (!isReady || !geminiModel) {
+            return { message: "⚠️ Gemini API key missing! Please configure the `gemini_api_key` in the SuperAdmin system settings." };
+        }
+
         const totalValue = context.products?.reduce((acc, p) => acc + ((p.current_stock || 0) * (p.selling_price || 0)), 0) || 0;
         const lowStock = context.products?.filter(p => (p.current_stock || 0) < 10).length || 0;
         const learned = await aiService.getLearnedPatterns(2);
@@ -222,10 +251,20 @@ ${examples ? `LEARNED PAST EXAMPLES:\n${examples}` : ''}
 
     testConnection: async (config?: any) => {
         try {
+            // Force re-initialization if testing connection via SuperAdmin
+            genAI = null;
+            geminiModel = null;
+            GEMINI_API_KEY = null;
+            
+            const isReady = await ensureGeminiInitialized();
+            if (!isReady || !geminiModel) {
+                return { success: false, message: "❌ API Offline/Key Invalid. Please save a valid Gemini Key in settings." }; 
+            }
+
             const chat = geminiModel.startChat();
             const result = await chat.sendMessage("ping");
             return result.response.text() 
-                ? { success: true, message: "✅ Gemini API SDK Online" } 
+                ? { success: true, message: "✅ Gemini API SDK Online & Ready" } 
                 : { success: false, message: "❌ API Offline/Key Invalid" };
         } catch { 
             return { success: false, message: "❌ Network Error or Invalid Key" }; 
