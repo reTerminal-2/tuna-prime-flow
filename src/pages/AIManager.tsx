@@ -166,14 +166,14 @@ const AIManager = () => {
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <h1 className="text-[18px] font-bold tracking-tight text-[#202124]">
-                TunaBrain <span className="text-[#1a73e8] font-black">Gemini</span>
+                TunaBrain <span className="text-[#1a73e8] font-black">V4.0</span>
               </h1>
             </div>
           </div>
           
           <div className="flex items-center gap-3 bg-[#e8f0fe] py-1.5 px-3 rounded-full border border-[#d2e3fc]">
              <div className="h-2 w-2 rounded-full bg-[#1e8e3e]" />
-             <span className="text-[11px] font-bold text-[#1967d2] uppercase tracking-wider hidden sm:block">Gemini 2.5 Flash</span>
+             <span className="text-[11px] font-bold text-[#1967d2] uppercase tracking-wider hidden sm:block">V4.0 Engine</span>
           </div>
         </nav>
 
@@ -270,7 +270,7 @@ const AIManager = () => {
               <div className="h-10"></div>
             </div>
           </ScrollArea>
-        {/* Input Form Floating - Gemini Style */}
+        {/* Input Form Floating - TunaBrain Style */}
         <div className="w-full max-w-4xl p-4 sm:px-8 absolute bottom-0 z-30 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pb-6">
             <form 
               onSubmit={(e) => { e.preventDefault(); sendMessage(); }} 
@@ -294,7 +294,7 @@ const AIManager = () => {
               </Button>
             </form>
             <p className="mt-3.5 text-[11px] text-[#80868b] text-center font-medium tracking-wide">
-              Gemini may produce inaccurate information about people, places, or facts.
+              TunaBrain V4.0 may produce inaccurate information about inventory, people, or facts. Always verify.
             </p>
           </div>
 
