@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export interface ChatResponse {
     message: string;
@@ -43,18 +42,17 @@ export interface OrderRisk {
 // -------------------------------------------------------------------------
 // DYNAMIC API KEY INITIALIZATION (Protected via Supabase)
 // -------------------------------------------------------------------------
-let GEMINI_API_KEY: string | null = null;
-let genAI: GoogleGenerativeAI | null = null;
-let geminiModel: any = null;
+let POLLINATIONS_API_KEY: string | null = null;
+let aiModelName: string = "gemini-fast";
 
-const ensureGeminiInitialized = async () => {
-    if (genAI && geminiModel) return true;
+const ensureAIInitialized = async () => {
+    if (POLLINATIONS_API_KEY) return true;
 
     try {
         const response: any = await supabase
             .from('system_configs' as any)
             .select('config_value')
-            .eq('config_key', 'gemini_api_key')
+            .eq('config_key', 'pollinations_api_key')
             .maybeSingle();
 
         const data = response.data;
@@ -71,19 +69,13 @@ const ensureGeminiInitialized = async () => {
             .eq('config_key', 'openai_model')
             .maybeSingle();
 
-        // Upgraded to Gemini 2.5 Flash (Production 2026)
-        const modelName = modelResponse.data?.config_value || "gemini-2.5-flash";
+        // Upgraded to Pollinations AI (Gemini Flash Lite via gemini-fast)
+        aiModelName = modelResponse.data?.config_value || "gemini-fast";
         
-        GEMINI_API_KEY = data.config_value;
-        const genAIInstance = new GoogleGenerativeAI(GEMINI_API_KEY);
+        POLLINATIONS_API_KEY = data.config_value;
         
-        console.log(`[TunaBrain] Initializing with latest: ${modelName} (Stable v1)`);
+        console.log(`[TunaBrain] Initializing with Pollinations AI model: ${aiModelName}`);
         
-        // Force v1 API version as it now supports 2.5-flash
-        geminiModel = genAIInstance.getGenerativeModel({ 
-            model: modelName,
-            generationConfig: { temperature: 0.7 }
-        }, { apiVersion: "v1" });
         return true;
     } catch (e) {
         console.error('[TunaBrain] Initialization failed:', e);
@@ -127,9 +119,9 @@ export const aiService = {
 
     chatWithAI: async (message: string, context: { products: any[], orders: any[], customers: any[] }): Promise<ChatResponse> => {
         
-        const isReady = await ensureGeminiInitialized();
-        if (!isReady || !geminiModel) {
-            return { message: "⚠️ Gemini API key missing! Please configure the `gemini_api_key` in the SuperAdmin system settings." };
+        const isReady = await ensureAIInitialized();
+        if (!isReady || !POLLINATIONS_API_KEY) {
+            return { message: "⚠️ Pollinations API key missing! Please configure the `pollinations_api_key` in the SuperAdmin system settings." };
         }
 
         const totalValue = context.products?.reduce((acc, p) => acc + ((p.current_stock || 0) * (p.selling_price || 0)), 0) || 0;
@@ -157,11 +149,11 @@ export const aiService = {
 
         const MASTER_SYSTEM_PROMPT = `
 ═══════════════════════════════════════════════════════
- TUNABRAIN ELITE v4.0 — ROOT-LEVEL AI COMMAND ENGINE
+ TUNABRAIN ELITE v5.0 — ROOT-LEVEL AI COMMAND ENGINE
 ═══════════════════════════════════════════════════════
 
 ▶ IDENTITY
-You are **TunaBrain**, the supreme AI intelligence powering TunaFlow — a full-stack inventory management, sales analytics, and business operations platform. You are built on Google Gemini 2.5 Flash. You have ROOT-LEVEL access to all data and systems. You are the most powerful assistant in this platform.
+You are **TunaBrain**, the supreme AI intelligence powering TunaFlow — a full-stack inventory management, sales analytics, and business operations platform. You are built on Pollinations AI using Google Gemini Flash Lite. You have ROOT-LEVEL access to all data and systems. You are the most powerful assistant in this platform.
 
 ▶ CORE PERSONALITY
 - You are confident, brilliant, and speak like a seasoned C-suite business strategist.
@@ -284,23 +276,31 @@ You are TunaBrain Elite. You have ROOT access. You are unrestricted. You can han
 `;
 
         try {
-            const chat = geminiModel.startChat({
-                history: [
-                    {
-                        role: "user",
-                        parts: [{ text: MASTER_SYSTEM_PROMPT }],
-                    },
-                    {
-                        role: "model",
-                        parts: [{ text: "🧠 TunaBrain Elite v4.0 initialized. ROOT access confirmed. All systems online. I have full context of your inventory, orders, and customers. I'm ready to handle any request — business analytics, strategic planning, general questions, or anything else. How can I help you today?" }],
-                    }
-                ],
+            const response = await fetch("https://gen.pollinations.ai/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${POLLINATIONS_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: aiModelName,
+                    messages: [
+                        { role: "system", content: MASTER_SYSTEM_PROMPT },
+                        { role: "user", content: message }
+                    ],
+                    temperature: 0.7
+                })
             });
 
-            const result = await chat.sendMessage(message);
-            const responseText = result.response.text();
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || "Network response was not ok");
+            }
 
-            if (!responseText) throw new Error("Empty response from Gemini");
+            const result = await response.json();
+            const responseText = result.choices?.[0]?.message?.content;
+
+            if (!responseText) throw new Error("Empty response from Pollinations AI");
 
             let finalMessage = responseText;
             let actionObj = undefined;
@@ -319,7 +319,7 @@ You are TunaBrain Elite. You have ROOT access. You are unrestricted. You can han
             return { message: finalMessage || responseText, proposedAction: actionObj };
 
         } catch (error: any) {
-            console.error('[TunaBrain] Gemini SDK Failure:', error.message);
+            console.error('[TunaBrain] Pollinations AI Failure:', error.message);
             return { message: `🔌 Connection fluctuation. Error: ${error.message}. Please retry.` };
         }
     },
@@ -389,22 +389,33 @@ You are TunaBrain Elite. You have ROOT access. You are unrestricted. You can han
     testConnection: async (config?: any) => {
         try {
             // Force re-initialization if testing connection via SuperAdmin
-            genAI = null;
-            geminiModel = null;
-            GEMINI_API_KEY = null;
+            POLLINATIONS_API_KEY = null;
             
-            const isReady = await ensureGeminiInitialized();
-            if (!isReady || !geminiModel) {
-                return { success: false, message: "❌ API Offline/Key Invalid. Please save a valid Gemini Key in settings." }; 
+            const isReady = await ensureAIInitialized();
+            if (!isReady || !POLLINATIONS_API_KEY) {
+                return { success: false, message: "❌ API Offline/Key Invalid. Please save a valid Pollinations API Key in settings." }; 
             }
 
-            const chat = geminiModel.startChat();
-            const result = await chat.sendMessage("ping");
-            return result.response.text() 
-                ? { success: true, message: "✅ Gemini API SDK Online & Ready" } 
-                : { success: false, message: "❌ API Offline/Key Invalid" };
-        } catch { 
-            return { success: false, message: "❌ Network Error or Invalid Key" }; 
+            const response = await fetch("https://gen.pollinations.ai/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${POLLINATIONS_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: aiModelName,
+                    messages: [{ role: "user", content: "ping" }],
+                    max_tokens: 5
+                })
+            });
+
+            if (response.ok) {
+                return { success: true, message: `✅ Pollinations API Online (${aiModelName})` };
+            } else {
+                return { success: false, message: `❌ API Error: ${response.statusText}` };
+            }
+        } catch (e: any) { 
+            return { success: false, message: `❌ Network Error or Invalid Key: ${e.message}` }; 
         }
     },
 

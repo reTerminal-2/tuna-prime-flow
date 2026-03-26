@@ -60,11 +60,11 @@ export default function SuperAdminDashboard() {
     });
 
     // AI Configuration States
-    const [aiProvider, setAiProvider] = useState<string>('gpt4free');
-    const [g4fModel, setG4fModel] = useState('stepfun/step-3.5-flash:free');
+    const [aiProvider, setAiProvider] = useState<string>('gemini');
+    const [g4fModel, setG4fModel] = useState('gemini-fast');
     const [g4fVmUrl, setG4fVmUrl] = useState('');
     const [openaiKey, setOpenaiKey] = useState("");
-    const [geminiKey, setGeminiKey] = useState("");
+    const [pollinationsKey, setPollinationsKey] = useState("");
     const [systemPrompt, setSystemPrompt] = useState("");
     const [testingAI, setTestingAI] = useState(false);
     const [savingAI, setSavingAI] = useState(false);
@@ -105,20 +105,21 @@ export default function SuperAdminDashboard() {
                 const promptConfig = (configs as any[]).find(c => c.config_key === 'system_prompt');
                 const modelConfig = (configs as any[]).find(c => c.config_key === 'openai_model');
                 const providerConfig = (configs as any[]).find(c => c.config_key === 'ai_provider');
-                const geminiConfig = (configs as any[]).find(c => c.config_key === 'gemini_api_key');
+                const pollinationsConfig = (configs as any[]).find(c => c.config_key === 'pollinations_api_key');
  
                 if (openaiConfig) setOpenaiKey(openaiConfig.config_value);
                 if (vpsConfig) setG4fVmUrl(vpsConfig.config_value);
                 if (promptConfig) setSystemPrompt(promptConfig.config_value);
                 if (modelConfig) setG4fModel(modelConfig.config_value);
                 if (providerConfig) setAiProvider(providerConfig.config_value);
-                if (geminiConfig) setGeminiKey(geminiConfig.config_value);
+                if (pollinationsConfig) setPollinationsKey(pollinationsConfig.config_value);
             }
         } catch (error) {
             console.error('Error loading AI settings from DB:', error);
             // Fallback to localStorage just in case table isn't ready
             setG4fVmUrl(localStorage.getItem("g4f_vm_url") || "http://72.60.232.20:3100");
-            setG4fModel(localStorage.getItem("g4f_model") || "gpt-4o-mini");
+            setG4fModel(localStorage.getItem("g4f_model") || "gemini-fast");
+            setAiProvider(localStorage.getItem("ai_provider") || "gemini");
         }
     };
 
@@ -212,7 +213,7 @@ export default function SuperAdminDashboard() {
                 { config_key: 'system_prompt', config_value: systemPrompt, updated_at: new Date().toISOString() },
                 { config_key: 'openai_model', config_value: g4fModel, updated_at: new Date().toISOString() },
                 { config_key: 'ai_provider', config_value: aiProvider, updated_at: new Date().toISOString() },
-                { config_key: 'gemini_api_key', config_value: geminiKey, updated_at: new Date().toISOString() }
+                { config_key: 'pollinations_api_key', config_value: pollinationsKey, updated_at: new Date().toISOString() }
             ];
 
             const { error } = await supabase
@@ -676,14 +677,11 @@ export default function SuperAdminDashboard() {
                                                 <SelectValue placeholder="Select Provider" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="gemini">Google Gemini (Native SDK)</SelectItem>
-                                                <SelectItem value="openrouter">OpenRouter (Free + Reasoning)</SelectItem>
-                                                <SelectItem value="vps">TunaBrain Pro (VPS)</SelectItem>
-                                                <SelectItem value="openai">OpenAI Legacy (API Key)</SelectItem>
+                                                <SelectItem value="gemini">Pollinations AI (Gemini Flash)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <p className="text-[10px] text-muted-foreground">
-                                            {aiProvider === 'gemini' ? "Powerful: Direct integration with Google's Gemini Flash 1.5 via official SDK." : aiProvider === 'openrouter'
+                                            {aiProvider === 'gemini' ? "Powerful: Direct integration with Pollinations AI using Gemini 2.5 Flash Lite." : aiProvider === 'openrouter'
                                                     ? "Recommended: Uses free, high-performance models from OpenRouter."
                                                     : aiProvider === 'vps'
                                                         ? "Advanced: Routes traffic through your private server relay."
@@ -693,7 +691,7 @@ export default function SuperAdminDashboard() {
 
                                       <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
                                           <Label className="text-sm font-medium">
-                                              {aiProvider === 'gemini' ? 'Google Gemini API Key' :
+                                              {aiProvider === 'gemini' ? 'Pollinations API Key' :
                                                aiProvider === 'openai' ? 'Legacy OpenAI API Key' : 
                                                aiProvider === 'openrouter' ? 'OpenRouter API Key' :
                                                'ChatGPT Session Token (Optional for VPS)'}
@@ -701,17 +699,17 @@ export default function SuperAdminDashboard() {
                                           <div className="relative">
                                               <Input
                                                   type="password"
-                                                  placeholder={aiProvider === 'gemini' ? "AIzaSy..." : aiProvider === 'openai' ? "sk-..." : "eyJhbG.. (Your browser cookie)"}
-                                                  value={aiProvider === 'gemini' ? geminiKey : openaiKey}
-                                                  onChange={(e) => aiProvider === 'gemini' ? setGeminiKey(e.target.value) : setOpenaiKey(e.target.value)}
+                                                  placeholder={aiProvider === 'gemini' ? "sk_..." : aiProvider === 'openai' ? "sk-..." : "eyJhbG.. (Your browser cookie)"}
+                                                  value={aiProvider === 'gemini' ? pollinationsKey : openaiKey}
+                                                  onChange={(e) => aiProvider === 'gemini' ? setPollinationsKey(e.target.value) : setOpenaiKey(e.target.value)}
                                                   className="bg-muted/30 pr-10"
                                               />
                                             <div className="absolute right-3 top-2.5">
-                                                  <Zap className={`w-4 h-4 ${(aiProvider === 'gemini' ? geminiKey : openaiKey) ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                                                  <Zap className={`w-4 h-4 ${(aiProvider === 'gemini' ? pollinationsKey : openaiKey) ? 'text-yellow-500' : 'text-muted-foreground'}`} />
                                               </div>
                                           </div>
                                           <p className="text-[10px] text-muted-foreground">
-                                              {aiProvider === 'gemini' ? "Generate your free key at AI Studio (aistudio.google.com)." : aiProvider === 'openai' ? "Standard API billing will apply." : aiProvider === 'openrouter'
+                                              {aiProvider === 'gemini' ? "Paste your Pollinations AI API Key here." : aiProvider === 'openai' ? "Standard API billing will apply." : aiProvider === 'openrouter'
                                                       ? "Paste your OpenRouter API key here. Reasoning models are supported."
                                                       : "Paste your session token here if required by your VPS provider selection."}
                                           </p>
@@ -746,13 +744,7 @@ export default function SuperAdminDashboard() {
                                                   <SelectValue placeholder="Select an OpenAI Model" />
                                               </SelectTrigger>
                                               <SelectContent>
-                                                    <SelectItem value="stepfun/step-3.5-flash:free">Step-3.5-Flash (Free reasoning)</SelectItem>
-                                                    <SelectItem value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</SelectItem><SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash (Production 2026)</SelectItem><SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (Standard)</SelectItem><SelectItem value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest)</SelectItem><SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (Standard)</SelectItem>
-                                                    <SelectItem value="google/gemini-2.0-pro-exp-02-05:free">Gemini 2.0 Pro (Free)</SelectItem>
-                                                    <SelectItem value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (Free)</SelectItem>
-                                                    <SelectItem value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free)</SelectItem>
-                                                    <SelectItem value="gpt-4o-mini">GPT-4o Mini (OpenAI)</SelectItem>
-                                                    <SelectItem value="gpt-4o">GPT-4o (OpenAI Premium)</SelectItem>
+                                                    <SelectItem value="gemini-fast">Gemini 2.5 Flash Lite (Pollinations)</SelectItem>
                                                 </SelectContent>
                                           </Select>
                                           <p className="text-xs text-slate-400">
