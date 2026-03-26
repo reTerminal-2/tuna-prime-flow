@@ -257,6 +257,15 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const isMobile = useIsMobile();
   const { totalUnreadCount, conversations, loadingConversations } = useSellerChat(user?.id);
 
+  const handleHeaderLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success("Logged out successfully");
+    } catch (error) {
+      toast.error("Logout failed");
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -375,15 +384,32 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <div className="flex items-center gap-3 pl-2 border-l border-border/50">
-                <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-primary/80 to-primary flex items-center justify-center text-primary-foreground font-medium shadow-md shadow-primary/20 ring-2 ring-background">
-                  {user?.email?.charAt(0).toUpperCase()}
-                </div>
-                <div className="hidden md:block text-sm">
-                  <p className="font-medium leading-none text-foreground">Admin</p>
-                  <p className="text-xs text-muted-foreground truncate max-w-[120px]">{user?.email}</p>
-                </div>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="flex items-center gap-3 pl-2 border-l border-border/50 cursor-pointer hover:bg-muted/50 p-1.5 rounded-lg transition-colors">
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-primary/80 to-primary flex items-center justify-center text-primary-foreground font-medium shadow-md shadow-primary/20 ring-2 ring-background">
+                      {user?.email?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="hidden md:block text-sm">
+                      <p className="font-medium leading-none text-foreground">Admin</p>
+                      <p className="text-xs text-muted-foreground truncate max-w-[120px]">{user?.email}</p>
+                    </div>
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-background/95 backdrop-blur-md border border-border/50 shadow-xl">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/')}>
+                    <Store className="h-4 w-4 mr-2" />
+                    Go to Storefront
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10" onClick={handleHeaderLogout}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
           <div className="flex-1 overflow-auto p-4 md:p-8 scroll-smooth">
