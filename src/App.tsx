@@ -37,6 +37,7 @@ const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Orders = lazy(() => import("./pages/Orders"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
+const CustomerMessages = lazy(() => import("./pages/CustomerMessages"));
 const UpdatePassword = lazy(() => import("./pages/UpdatePassword"));
 const SuperAdminLogin = lazy(() => import("./pages/SuperAdminLogin"));
 const SuperAdminDashboard = lazy(() => import("./pages/SuperAdminDashboard"));
@@ -96,6 +97,7 @@ const App = () => (
                     <Route path="checkout" element={<Checkout />} />
                     <Route path="orders" element={<Orders />} />
                     <Route path="profile" element={<UserProfile />} />
+                    <Route path="messages" element={<CustomerMessages />} />
                   </Route>
 
                   <Route path="/auth" element={<Auth />} />

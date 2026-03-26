@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 
 import { useProfileRedirect } from "@/hooks/useProfileRedirect";
+import FloatingChatButton from "@/components/FloatingChatButton";
 
 const StoreLayout = () => {
   const [cartCount, setCartCount] = useState(0);
@@ -129,6 +130,9 @@ const StoreLayout = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/orders">My Orders</Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/messages">My Messages</Link>
+                  </DropdownMenuItem>
                   
                   {(user?.user_metadata?.role === 'admin' || user?.user_metadata?.role === 'seller') && (
                     <DropdownMenuItem asChild>
@@ -161,6 +165,9 @@ const StoreLayout = () => {
       <main className="flex-1 container mx-auto px-4 py-6">
         <Outlet />
       </main>
+
+      {/* Floating Chat Button for logged-in customers */}
+      <FloatingChatButton />
 
       {/* Footer */}
       <footer className="bg-white border-t py-8 mt-auto">
