@@ -65,11 +65,23 @@ const ensureGeminiInitialized = async () => {
             return false;
         }
 
+        const modelResponse: any = await supabase
+            .from('system_configs' as any)
+            .select('config_value')
+            .eq('config_key', 'openai_model')
+            .maybeSingle();
+
+        // Default to a known stable model if not configured
+        const modelName = modelResponse.data?.config_value || "gemini-1.5-flash";
+        
         GEMINI_API_KEY = data.config_value;
-        genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        // SDK manages v1beta/models/... endpoint routing
-        geminiModel = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash", 
+        const genAIInstance = new GoogleGenerativeAI(GEMINI_API_KEY);
+        
+        console.log(`[TunaBrain] Initializing Gemini with model: ${modelName} (Stable v1)`);
+        
+        // Use standard stable model identifiers
+        geminiModel = genAIInstance.getGenerativeModel({ 
+            model: modelName,
             generationConfig: { temperature: 0.7 }
         });
         return true;
