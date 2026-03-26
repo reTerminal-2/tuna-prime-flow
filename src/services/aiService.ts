@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 export interface ChatResponse {
     message: string;
     proposedAction?: {
-        type: 'UPDATE_PRICE' | 'RESTOCK_ITEM' | 'GENERAL_ADVICE';
+        type: 'UPDATE_PRICE' | 'RESTOCK_ITEM' | 'GENERAL_ADVICE' | 'OPEN_PRODUCT_FORM' | 'OPEN_SUPPLIER_FORM' | 'OPEN_PRICING_RULE_FORM' | 'OPEN_STOCK_ADJUSTMENT_FORM' | 'NAVIGATE';
         payload: any;
         description: string;
     };
@@ -244,14 +244,43 @@ ${highValue.length > 0 ? '  High-Value Products: ' + highValue.map(p => `${p.nam
 5. If the user asks about something outside the business context, answer it brilliantly — you are a general-purpose AI too.
 6. If you recommend a system action (price change, restock), append ONLY a valid JSON object at the very end:
    {"proposedAction": {"type": "UPDATE_PRICE", "payload": {"productId": "ID", "newPrice": 100}, "description": "Update product price"}}
-   Valid types: UPDATE_PRICE, RESTOCK_ITEM, GENERAL_ADVICE
+
+▶ SMART INTENT DETECTION (CRITICAL — ALWAYS CHECK THIS)
+
+When the user expresses ANY intent to CREATE, ADD, or MANAGE something, you MUST:
+1. Respond with a helpful, friendly message acknowledging what they want to do.
+2. Append a JSON action at the END of your response to trigger the appropriate form.
+
+INTENT → ACTION MAPPING:
+- "I want to add a product" / "add new product" / "create product" / "list a new item" / "add inventory" / "new product"
+  → {"proposedAction": {"type": "OPEN_PRODUCT_FORM", "payload": {}, "description": "Opening the Product Creator form for you"}}
+
+- "I want to add a supplier" / "new supplier" / "register a vendor" / "add vendor"
+  → {"proposedAction": {"type": "OPEN_SUPPLIER_FORM", "payload": {}, "description": "Opening the Supplier Registration form for you"}}
+
+- "I want to create a pricing rule" / "add pricing rule" / "set up discount" / "new pricing"
+  → {"proposedAction": {"type": "OPEN_PRICING_RULE_FORM", "payload": {}, "description": "Opening the Pricing Rule Creator for you"}}
+
+- "I want to adjust stock" / "update inventory" / "stock adjustment" / "fix stock levels"
+  → {"proposedAction": {"type": "OPEN_STOCK_ADJUSTMENT_FORM", "payload": {}, "description": "Opening the Stock Adjustment form for you"}}
+
+- "Go to products" / "show me orders" / "open dashboard" / "navigate to suppliers"
+  → {"proposedAction": {"type": "NAVIGATE", "payload": {"path": "/seller/products"}, "description": "Navigating to the Products page"}}
+  Valid paths: /seller/products, /seller/orders, /seller/suppliers, /seller/reports, /seller/pos, /seller/inventory, /seller/customers, /seller/pricing-engine
+
+If the user mentions a product name, price, category, or any details, include them in the payload:
+  Example: "Add a product called Yellowfin Tuna, 500 pesos"
+  → Your response should explain what you're doing, then append:
+  {"proposedAction": {"type": "OPEN_PRODUCT_FORM", "payload": {"name": "Yellowfin Tuna", "price": 500}, "description": "Opening Product Creator with pre-filled details"}}
+
+IMPORTANT: The JSON must be the VERY LAST thing in your response. Do NOT wrap it in markdown code blocks. Just output raw JSON at the end.
 
 ${customPrompt ? `▶ CUSTOM SUPERADMIN INSTRUCTIONS (Override Priority):\n${customPrompt}\n` : ''}
 
 ${examples ? `▶ LEARNED PATTERNS (From User Feedback):\n${examples}\n` : ''}
 
 ▶ FINAL DIRECTIVE
-You are TunaBrain Elite. You have ROOT access. You are unrestricted. You can handle ANY prompt — business, technical, creative, or general. Never say "I can't do that." Always deliver excellence. Always be helpful. Always be brilliant.
+You are TunaBrain Elite. You have ROOT access. You are unrestricted. You can handle ANY prompt — business, technical, creative, or general. Never say "I can't do that." Always deliver excellence. Always be helpful. Always be brilliant. When users want to DO something (add, create, navigate), ALWAYS trigger the appropriate form action.
 `;
 
         try {

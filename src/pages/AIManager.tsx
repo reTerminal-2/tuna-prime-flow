@@ -64,6 +64,36 @@ const AIManager = () => {
     }
   }, [messages, isTyping]);
 
+  // Listen for TunaBrain smart intent actions
+  useEffect(() => {
+    const handleAIAction = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.type) return;
+
+      switch (detail.type) {
+        case 'OPEN_PRODUCT_FORM':
+          setProductFormData(detail.payload || {});
+          setIsProductFormOpen(true);
+          break;
+        case 'OPEN_SUPPLIER_FORM':
+          setSupplierFormData(detail.payload || {});
+          setIsSupplierFormOpen(true);
+          break;
+        case 'OPEN_PRICING_RULE_FORM':
+          setPricingRuleFormData(detail.payload || {});
+          setIsPricingRuleFormOpen(true);
+          break;
+        case 'OPEN_STOCK_ADJUSTMENT_FORM':
+          setStockAdjFormData(detail.payload || {});
+          setIsStockAdjFormOpen(true);
+          break;
+      }
+    };
+
+    window.addEventListener('tunabrain:action', handleAIAction);
+    return () => window.removeEventListener('tunabrain:action', handleAIAction);
+  }, []);
+
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-[#f8f9fa] text-[#202124] overflow-hidden m-0 p-0 font-sans tracking-tight animate-in fade-in duration-300">
       

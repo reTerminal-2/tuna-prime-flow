@@ -319,7 +319,7 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
       setMessages(prev => [...prev, confirmMsg]);
       if (currentSessionId) saveMessageToHistory(confirmMsg, currentSessionId);
     } else {
-      toast.error(`Failed to execute action: ${result.error || "Unknown error"}`);
+      toast.error("Failed to execute action");
     }
   };
 
@@ -344,13 +344,21 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
       const response = await aiService.chatWithAI(userMsg.content, contextData);
 
       const aiMsgId = crypto.randomUUID();
+      
+      // Check if the action is a UI action (form open or navigation) — auto-execute these
+      const isUIAction = response.proposedAction && [
+        'OPEN_PRODUCT_FORM', 'OPEN_SUPPLIER_FORM', 'OPEN_PRICING_RULE_FORM', 
+        'OPEN_STOCK_ADJUSTMENT_FORM', 'NAVIGATE'
+      ].includes(response.proposedAction.type);
+
       const aiMsg: ChatMessage = {
         id: aiMsgId,
         role: 'assistant',
         content: response.message,
         timestamp: new Date(),
         action: response.proposedAction,
-        actionStatus: response.proposedAction ? 'pending' : undefined
+        // Auto-complete UI actions, keep others as pending for user approval
+        actionStatus: isUIAction ? 'completed' : (response.proposedAction ? 'pending' : undefined)
       };
 
       // Track Q->A pair for feedback context
@@ -359,6 +367,20 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
       setMessages(prev => [...prev, aiMsg]);
 
       if (currentSessionId) saveMessageToHistory(aiMsg, currentSessionId);
+
+      // Auto-execute UI actions immediately
+      if (isUIAction && response.proposedAction) {
+        const action = response.proposedAction;
+        if (action.type === 'NAVIGATE' && action.payload?.path) {
+          navigate(action.payload.path);
+          toast.success(`Navigating to ${action.description || action.payload.path}`);
+        } else {
+          // Dispatch custom event for AIManager to catch and open the form
+          window.dispatchEvent(new CustomEvent('tunabrain:action', { 
+            detail: { type: action.type, payload: action.payload } 
+          }));
+        }
+      }
     } catch (error) {
       toast.error("AI is temporarily unavailable. Please try again.");
     } finally {
