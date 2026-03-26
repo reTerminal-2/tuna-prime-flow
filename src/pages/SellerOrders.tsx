@@ -368,7 +368,7 @@ const OrderDetailsDialog = ({ order, risk, onUpdateStatus, trigger }: { order: O
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-card border-none shadow-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-md border border-border/50 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center pr-8 text-xl">
             <span className="font-bold flex items-center gap-2">

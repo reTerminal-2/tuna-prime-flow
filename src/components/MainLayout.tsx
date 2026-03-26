@@ -218,7 +218,7 @@ const AppSidebar = () => {
       </SidebarContent>
 
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <AlertDialogContent className="glass-card border-none max-w-[90vw] sm:max-w-md">
+        <AlertDialogContent className="bg-background/95 backdrop-blur-md border border-border/50 max-w-[90vw] sm:max-w-md shadow-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
             <AlertDialogDescription>
