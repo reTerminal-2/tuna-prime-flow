@@ -37,8 +37,6 @@ interface Order {
   profiles: {
     full_name: string;
     email: string;
-    phone_number: string;
-    address: string;
   };
   order_items: {
     id: string;
@@ -114,11 +112,8 @@ const SellerOrders = () => {
           *,
           profiles:user_id (
             full_name,
-            email,
-            phone_number,
-            address
+            email
           ),
-
           order_items (
             id,
             quantity,
@@ -426,7 +421,7 @@ const OrderDetailsDialog = ({ order, risk, onUpdateStatus, trigger }: { order: O
                   <p className="text-sm text-muted-foreground">{order.profiles?.email}</p>
                   <div className="flex items-center gap-1.5 mt-2 text-xs text-primary font-medium">
                     <Phone className="h-3 w-3" />
-                    {order.profiles?.phone_number || "No phone provided"}
+                    {"No phone provided"}
                   </div>
                 </div>
               </div>
