@@ -239,6 +239,7 @@ const AIManager = () => {
               
               <div className="h-10"></div>
             </div>
+          </ScrollArea>
         {/* Input Form Floating - Gemini Style */}
         <div className="w-full max-w-4xl p-4 sm:px-8 absolute bottom-0 z-30 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pb-6">
             <form 
