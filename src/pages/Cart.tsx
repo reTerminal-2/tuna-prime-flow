@@ -76,16 +76,43 @@ const Cart = () => {
         return;
       }
 
-      // Create transactions for each item
+      // 1. Create the main Order record
+      const totalAmount = calculateTotal();
+      const { data: orderHeader, error: orderError } = await (supabase as any)
+        .from("orders")
+        .insert({
+          user_id: user.id,
+          status: 'pending',
+          total_amount: totalAmount,
+          shipping_address: 'Pending Address', // Placeholder until checkout page is fully built
+          payment_status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 2. Process each item
       for (const item of cart) {
-        // 1. Create transaction record
+        // 2a. Create order_item
+        const { error: itemError } = await (supabase as any).from("order_items").insert({
+          order_id: orderHeader.id,
+          product_id: item.id,
+          quantity: item.quantity,
+          unit_price: item.selling_price,
+          total_price: item.selling_price * item.quantity
+        });
+
+        if (itemError) throw itemError;
+
+        // 2b. Create POS transaction record (maintains backward compatibility with Analytics)
         const { error: txError } = await supabase.from("transactions").insert({
           product_id: item.id,
           quantity: item.quantity,
           unit_price: item.selling_price,
           total_amount: item.selling_price * item.quantity,
-          profit: 0, // Simplified for now, backend usually calculates this
-          cost_price: 0, // Should be fetched from product
+          profit: 0,
+          cost_price: 0,
           created_by: user.id,
           transaction_date: new Date().toISOString(),
           notes: `Online Order - ${user.email}`
@@ -93,13 +120,12 @@ const Cart = () => {
 
         if (txError) throw txError;
 
-        // 2. Update stock
-        const { error: stockError } = await supabase.rpc('decrement_stock', { 
+        // 2c. Update stock
+        const { error: stockError } = await (supabase as any).rpc('decrement_stock', { 
           p_id: item.id, 
           q: item.quantity 
         });
         
-        // Fallback if RPC doesn't exist (client-side update - less safe but works for demo)
         if (stockError) {
           const { error: updateError } = await supabase
             .from("products")
