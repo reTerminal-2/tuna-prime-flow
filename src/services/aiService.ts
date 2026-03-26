@@ -212,7 +212,7 @@ ${examples ? `LEARNED PAST EXAMPLES:\n${examples}` : ''}
         }));
     },
     generatePricingSuggestions: async (products: any[]): Promise<any[]> => [],
-    generateReportSummary: async (data: any): Promise<string> => "Based on your data, revenue remains stable with slight fluctuations in inventory movement.",
+    generateReportSummary: (data: any): string => `Based on your analysis, total sales are at ₱${(data.totalSales || 0).toLocaleString()} across ${data.totalOrders || 0} orders. ${data.topProduct !== 'N/A' ? `Your top selling item continues to be ${data.topProduct}.` : ''} Revenue trends appear stable with steady inventory movement.`,
     generatePricingRuleDescription: async (name: string, type: string) => `A dynamic ${type} rule intended for ${name}.`,
     simulatePricingRuleLogic: async (rule: any) => ({ impact: "Positive", estRevenueChange: 15.5 }),
     generateStockAdjustmentReason: async (data: any) => "Routine inventory reconciliation.",
