@@ -43,6 +43,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -73,21 +81,12 @@ const configItems = [
   { title: "Settings", url: "/seller/settings", icon: Settings },
 ];
 
-const AppSidebar = () => {
+const AppSidebar = ({ totalUnreadCount }: { totalUnreadCount: number }) => {
   const { state, setOpenMobile } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [user, setUser] = useState<{ id: string } | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-  }, []);
-
-  const { totalUnreadCount } = useSellerChat(user?.id);
 
   const handleLogoutClick = () => {
     setShowLogoutDialog(true);
@@ -256,6 +255,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const hasNavigatedRef = useRef(false);
   const isMobile = useIsMobile();
+  const { totalUnreadCount, conversations, loadingConversations } = useSellerChat(user?.id);
 
   useEffect(() => {
     let mounted = true;
@@ -311,7 +311,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background selection:bg-primary/20">
-        <AppSidebar />
+        <AppSidebar totalUnreadCount={totalUnreadCount} />
         <main className="flex-1 flex flex-col min-w-0 bg-muted/30 transition-all duration-300 ease-in-out">
           <header className="flex h-16 items-center gap-4 border-b border-border/40 bg-background/80 px-6 sticky top-0 z-20 backdrop-blur-md shrink-0 supports-[backdrop-filter]:bg-background/60">
             <div className="w-full flex-1">
@@ -327,10 +327,54 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               </form>
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
-              <Button variant="ghost" size="icon" className="relative hover:bg-accent rounded-full">
-                <Bell className="h-5 w-5 text-muted-foreground" />
-                <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-red-500 rounded-full ring-2 ring-background animate-pulse"></span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative hover:bg-accent rounded-full">
+                    <Bell className="h-5 w-5 text-muted-foreground" />
+                    {totalUnreadCount > 0 && (
+                      <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-red-500 rounded-full ring-2 ring-background animate-pulse"></span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80 bg-background/95 backdrop-blur-md border border-border/50 shadow-xl">
+                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {loadingConversations ? (
+                      <div className="p-4 text-center text-sm text-muted-foreground animate-pulse">Loading...</div>
+                    ) : totalUnreadCount === 0 ? (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        No new notifications
+                      </div>
+                    ) : (
+                      conversations.filter(c => c.unreadCount > 0).map((conv) => (
+                        <DropdownMenuItem 
+                          key={conv.customer.id} 
+                          className="cursor-pointer flex flex-col items-start gap-1 p-3" 
+                          onClick={() => navigate('/seller/messages')}
+                        >
+                          <div className="flex w-full items-center justify-between">
+                            <span className="font-semibold text-sm">{conv.customer.full_name || 'Customer'}</span>
+                            <span className="text-[10px] bg-primary text-primary-foreground font-bold px-1.5 py-0.5 rounded-full">
+                              {conv.unreadCount} new
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground line-clamp-1 w-full text-left">
+                            {conv.lastMessage?.content}
+                          </span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="cursor-pointer text-center text-primary justify-center font-medium p-3" 
+                    onClick={() => navigate('/seller/messages')}
+                  >
+                    View All Messages
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <div className="flex items-center gap-3 pl-2 border-l border-border/50">
                 <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-primary/80 to-primary flex items-center justify-center text-primary-foreground font-medium shadow-md shadow-primary/20 ring-2 ring-background">
                   {user?.email?.charAt(0).toUpperCase()}
