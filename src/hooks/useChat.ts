@@ -17,23 +17,45 @@ export interface ChatSeller {
   profile_url: string;
 }
 
+// Read unique sellers from cart items stored in localStorage
+const getSellersFromCart = (): ChatSeller[] => {
+  try {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const seen = new Set<string>();
+    const sellers: ChatSeller[] = [];
+    for (const item of cart) {
+      if (item.seller_id && !seen.has(item.seller_id)) {
+        seen.add(item.seller_id);
+        sellers.push({
+          user_id: item.seller_id,
+          store_name: item.seller_store_name || 'TunaFlow Store',
+          profile_url: item.seller_profile_url || '',
+        });
+      }
+    }
+    return sellers;
+  } catch {
+    return [];
+  }
+};
+
 export const useChat = (currentUserId: string | undefined) => {
   const [eligibleSellers, setEligibleSellers] = useState<ChatSeller[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingSellers, setLoadingSellers] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
 
-  // Fetch sellers the user has bought from
-  useEffect(() => {
-    const fetchSellers = async () => {
-      if (!currentUserId) {
-        setLoadingSellers(false);
-        return;
-      }
+  // Merge cart sellers + order sellers into a single deduplicated list
+  const refreshSellers = async () => {
+    // Always include cart sellers first (instant, no network needed)
+    const cartSellers = getSellersFromCart();
+    const cartSellerIds = new Set(cartSellers.map(s => s.user_id));
 
+    // Then fetch order-based sellers if user is logged in
+    let orderSellers: ChatSeller[] = [];
+    if (currentUserId) {
       try {
-        // Find order items for the current user's orders
-        const { data: orderItems, error: itemsError } = await supabase
+        const { data: orderItems } = await supabase
           .from('order_items')
           .select(`
             products (
@@ -45,45 +67,41 @@ export const useChat = (currentUserId: string | undefined) => {
           `)
           .eq('orders.user_id', currentUserId);
 
-        if (itemsError) throw itemsError;
-
-        // Extract unique seller IDs
         const sellerIds = new Set<string>();
         orderItems?.forEach((item: any) => {
-          if (item.products?.user_id) {
+          if (item.products?.user_id && !cartSellerIds.has(item.products.user_id)) {
             sellerIds.add(item.products.user_id);
           }
         });
 
-        if (sellerIds.size === 0) {
-          setEligibleSellers([]);
-          setLoadingSellers(false);
-          return;
-        }
+        if (sellerIds.size > 0) {
+          const { data: stores } = await supabase
+            .from('store_settings')
+            .select('user_id, store_name, profile_url')
+            .in('user_id', Array.from(sellerIds));
 
-        // Fetch store settings for these sellers
-        const { data: stores, error: storesError } = await supabase
-          .from('store_settings')
-          .select('user_id, store_name, profile_url')
-          .in('user_id', Array.from(sellerIds));
-
-        if (storesError) throw storesError;
-
-        setEligibleSellers(
-          stores?.map(s => ({
+          orderSellers = stores?.map(s => ({
             user_id: s.user_id || '',
             store_name: s.store_name || 'Unknown Store',
             profile_url: s.profile_url || ''
-          })).filter(s => s.user_id) || []
-        );
-      } catch (error: any) {
-        console.error('Error fetching sellers:', error);
-      } finally {
-        setLoadingSellers(false);
+          })).filter(s => s.user_id) || [];
+        }
+      } catch (error) {
+        console.error('Error fetching order sellers:', error);
       }
-    };
+    }
 
-    fetchSellers();
+    setEligibleSellers([...cartSellers, ...orderSellers]);
+    setLoadingSellers(false);
+  };
+
+  useEffect(() => {
+    refreshSellers();
+
+    // Re-run when cart changes (cartUpdated event)
+    const onCartUpdated = () => refreshSellers();
+    window.addEventListener('cartUpdated', onCartUpdated);
+    return () => window.removeEventListener('cartUpdated', onCartUpdated);
   }, [currentUserId]);
 
   const fetchMessages = async (sellerId: string) => {
@@ -121,7 +139,6 @@ export const useChat = (currentUserId: string | undefined) => {
   const sendMessage = async (sellerId: string, content: string) => {
     if (!currentUserId || !content.trim()) return false;
     
-    // Optimistic UI update
     const tempId = crypto.randomUUID();
     const newMessage: ChatMessage = {
       id: tempId,
@@ -148,7 +165,6 @@ export const useChat = (currentUserId: string | undefined) => {
     } catch (error: any) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
-      // Revert optimistic update
       setMessages(prev => prev.filter(m => m.id !== tempId));
       return false;
     }
@@ -174,7 +190,6 @@ export const useChat = (currentUserId: string | undefined) => {
         table: 'messages',
         filter: `sender_id=eq.${currentUserId}`
       }, (payload) => {
-        // Already handled optimistically, but lets ensure we don't duplicate
         setMessages(prev => {
           const exists = prev.some(m => m.content === payload.new.content && Math.abs(new Date(m.created_at).getTime() - new Date(payload.new.created_at).getTime()) < 5000);
           if (exists) return prev;

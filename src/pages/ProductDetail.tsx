@@ -20,6 +20,9 @@ interface Product {
   sku: string;
   image_url: string | null;
   images: string[] | null;
+  user_id: string | null;     // seller id
+  seller_store_name?: string; // fetched from store_settings
+  seller_profile_url?: string;
 }
 
 const ProductDetail = () => {
@@ -39,15 +42,31 @@ const ProductDetail = () => {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, selling_price, category, description, image_url, current_stock, unit_of_measure, sku")
+        .select("id, name, selling_price, category, description, image_url, current_stock, unit_of_measure, sku, user_id")
         .eq("id", productId)
         .single();
 
       if (error) throw error;
       const images = (data as any).images && Array.isArray((data as any).images) ? ((data as any).images as string[]) : (data.image_url ? [data.image_url] : []);
+      
+      // Fetch seller store info for chat
+      let seller_store_name: string | undefined;
+      let seller_profile_url: string | undefined;
+      if ((data as any).user_id) {
+        const { data: storeData } = await supabase
+          .from('store_settings')
+          .select('store_name, profile_url')
+          .eq('user_id', (data as any).user_id)
+          .maybeSingle();
+        seller_store_name = storeData?.store_name || 'TunaFlow Store';
+        seller_profile_url = storeData?.profile_url || '';
+      }
+
       const productData: Product = {
         ...data,
-        images: images.length > 0 ? images : getMockImagesByCategory(data.category || "")
+        images: images.length > 0 ? images : getMockImagesByCategory(data.category || ""),
+        seller_store_name,
+        seller_profile_url,
       };
       setProduct(productData);
     } catch (error) {
@@ -70,7 +89,14 @@ const ProductDetail = () => {
       }
       existingItem.quantity += quantity;
     } else {
-      cart.push({ ...product, quantity });
+      cart.push({
+        ...product,
+        quantity,
+        // Store seller info for chat
+        seller_id: product.user_id,
+        seller_store_name: product.seller_store_name,
+        seller_profile_url: product.seller_profile_url,
+      });
     }
 
     localStorage.setItem("cart", JSON.stringify(cart));
