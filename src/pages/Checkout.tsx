@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -24,7 +24,7 @@ const Checkout = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [shippingAddress, setShippingAddress] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "payrex">("payrex");
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "online">("online");
   const [profile, setProfile] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
@@ -80,7 +80,7 @@ const Checkout = () => {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         toast.error("Please login to complete your order");
         navigate("/auth");
@@ -101,7 +101,7 @@ const Checkout = () => {
           total_amount: calculateTotal(),
           status: "pending",
           shipping_address: shippingAddress,
-          payment_status: paymentMethod === "payrex" ? "pending_payment" : "pending"
+          payment_status: paymentMethod === "online" ? "pending_payment" : "pending"
         })
         .select()
         .single();
@@ -125,15 +125,15 @@ const Checkout = () => {
 
         // Create Transaction (for seller reporting)
         const { error: txError } = await supabase.from("transactions").insert({
-            product_id: item.id,
-            quantity: item.quantity,
-            unit_price: item.selling_price,
-            total_amount: item.selling_price * item.quantity,
-            profit: 0, 
-            cost_price: 0,
-            created_by: user.id,
-            transaction_date: new Date().toISOString(),
-            notes: `Order #${order.id.slice(0, 8)}`
+          product_id: item.id,
+          quantity: item.quantity,
+          unit_price: item.selling_price,
+          total_amount: item.selling_price * item.quantity,
+          profit: 0,
+          cost_price: 0,
+          created_by: user.id,
+          transaction_date: new Date().toISOString(),
+          notes: `Order #${order.id.slice(0, 8)}`
         });
         if (txError) throw txError;
 
@@ -141,50 +141,68 @@ const Checkout = () => {
         // Update Stock (Optimistic)
         // Note: For production, use a Database Function (RPC) to ensure atomicity
         const { error: updateError } = await supabase
-            .from("products")
-            .update({ current_stock: item.current_stock - item.quantity })
-            .eq("id", item.id);
-            
+          .from("products")
+          .update({ current_stock: item.current_stock - item.quantity })
+          .eq("id", item.id);
+
         if (updateError) {
-             console.error(`Failed to update stock for ${item.name}`, updateError);
-             // Consider rolling back or alerting admin
+          console.error(`Failed to update stock for ${item.name}`, updateError);
+          // Consider rolling back or alerting admin
         }
       }
 
-      // Handle Payrex Redirection (Online Payment via GCash/Card)
-      if (paymentMethod === "payrex" && cart.length > 0) {
+      // Handle Online Payment Redirection (HitPay or Payrex)
+      if (paymentMethod === "online" && cart.length > 0) {
         // Fetch seller details from the first product
         const { data: productData } = await supabase
           .from('products')
           .select('user_id')
           .eq('id', cart[0].id)
           .single();
-          
+
         const sellerId = productData?.user_id;
 
         if (sellerId) {
-          toast.info("Redirecting to secure payment gateway (GCash / Card)...");
-          
-          const { data: edgeData, error: edgeError } = await supabase.functions.invoke('create-payrex-checkout', {
+          toast.info("Connecting to payment gateway...");
+
+          const { data: edgeData, error: edgeError } = await supabase.functions.invoke('create-hitpay-checkout', {
             body: {
-               seller_id: sellerId,
-               order_id: order.id,
-               items: cart,
-               success_url: `${window.location.origin}/orders`,
-               cancel_url: `${window.location.origin}/cart`
+              seller_id: sellerId,
+              order_id: order.id,
+              items: cart,
+              success_url: `${window.location.origin}/orders`,
+              cancel_url: `${window.location.origin}/cart`
             }
           });
-          
+
           if (edgeError || !edgeData?.url) {
-            console.error("Payrex Edge Error:", edgeError || edgeData);
-            toast.error("Payment gateway is temporarily unavailable. Defaulting to COD.");
-            await supabase.from('orders').update({ payment_status: 'failed_payrex_fallback' }).eq('id', order.id);
+            console.warn("HitPay checkout failed, trying Payrex fallback...", edgeError);
+
+            // Fallback to Payrex if HitPay is not configured
+            const { data: payrexData, error: payrexError } = await supabase.functions.invoke('create-payrex-checkout', {
+              body: {
+                seller_id: sellerId,
+                order_id: order.id,
+                items: cart,
+                success_url: `${window.location.origin}/orders`,
+                cancel_url: `${window.location.origin}/cart`
+              }
+            });
+
+            if (payrexError || !payrexData?.url) {
+              toast.error("Online payment is currently unavailable. Defaulting to COD.");
+              await supabase.from('orders').update({ payment_status: 'failed_payment_fallback' }).eq('id', order.id);
+            } else {
+              localStorage.removeItem("cart");
+              window.dispatchEvent(new Event("cartUpdated"));
+              window.location.href = payrexData.url;
+              return;
+            }
           } else {
             localStorage.removeItem("cart");
             window.dispatchEvent(new Event("cartUpdated"));
-            // Secure Redirect to Payrex hosted checkout
             window.location.href = edgeData.url;
-            return; 
+            return;
           }
         } else {
           toast.error("Could not determine seller to route payment. Proceeding as COD.");
@@ -272,21 +290,22 @@ const Checkout = () => {
               </div>
               <div className="space-y-3 pt-2">
                 <Label>Payment Method</Label>
-                <div 
-                  className={`p-4 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'payrex' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
-                  onClick={() => setPaymentMethod('payrex')}
+                <div
+                  className={`p-4 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'online' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                  onClick={() => setPaymentMethod('online')}
                 >
                   <div className="flex items-center justify-between">
                     <div className="font-semibold text-primary">Secure Online Payment</div>
                     <div className="flex gap-2">
                       <div className="h-6 w-10 bg-blue-600 rounded text-[10px] text-white flex items-center justify-center font-bold">GCash</div>
+                      <div className="h-6 w-10 bg-indigo-600 rounded text-[10px] text-white flex items-center justify-center font-bold">Maya</div>
                       <div className="h-6 w-10 bg-slate-800 rounded text-[10px] text-white flex items-center justify-center font-bold">Card</div>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">Powered securely by Payrex</p>
+                  <p className="text-sm text-muted-foreground mt-1">Powered by HitPay & Payrex</p>
                 </div>
-                
-                <div 
+
+                <div
                   className={`p-4 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
                   onClick={() => setPaymentMethod('cod')}
                 >
@@ -319,11 +338,11 @@ const Checkout = () => {
             </div>
           </CardContent>
           <CardFooter>
-            <Button 
-              type="submit" 
-              form="checkout-form" 
-              className="w-full" 
-              size="lg" 
+            <Button
+              type="submit"
+              form="checkout-form"
+              className="w-full"
+              size="lg"
               disabled={loading}
             >
               {loading ? "Placing Order..." : "Place Order"}

@@ -16,12 +16,18 @@ const PaymentSettings = () => {
     enable_tax: false,
     tax_rate: "0",
   });
-  
+
   const [payrex, setPayrex] = useState({
     payrex_secret_key: "",
     payrex_public_key: "",
     payrex_webhook_secret: "",
     is_active: false,
+  });
+
+  const [hitpay, setHitpay] = useState({
+    hitpay_api_key: "",
+    hitpay_salt: "",
+    hitpay_is_active: false,
   });
 
   useEffect(() => {
@@ -32,6 +38,12 @@ const PaymentSettings = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      const { data: storeData } = await supabase
+        .from("store_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
       if (storeData) {
         setSettings({
@@ -46,15 +58,21 @@ const PaymentSettings = () => {
         .select("*")
         .eq("user_id", user.id)
         .single();
-        
+
       if (payrexError && payrexError.code !== "PGRST116") throw payrexError;
-      
+
       if (payrexData) {
         setPayrex({
           payrex_secret_key: payrexData.payrex_secret_key || "",
           payrex_public_key: payrexData.payrex_public_key || "",
           payrex_webhook_secret: payrexData.payrex_webhook_secret || "",
           is_active: payrexData.is_active || false,
+        });
+
+        setHitpay({
+          hitpay_api_key: payrexData.hitpay_api_key || "",
+          hitpay_salt: payrexData.hitpay_salt || "",
+          hitpay_is_active: payrexData.hitpay_is_active || false,
         });
       }
     } catch (error) {
@@ -88,16 +106,16 @@ const PaymentSettings = () => {
       const payrexUpdates = {
         user_id: user.id,
         ...payrex,
+        ...hitpay,
         updated_at: new Date().toISOString(),
       };
-      
+
       const { error: payrexError } = await supabase
         .from("seller_payment_settings")
         .upsert(payrexUpdates, { onConflict: "user_id" });
-        
+
       if (payrexError) throw payrexError;
 
-      if (error) throw error;
       toast.success("Payment settings saved");
     } catch (error: any) {
       console.error("Error saving settings:", error);
@@ -141,25 +159,63 @@ const PaymentSettings = () => {
             />
           </div>
 
+          <div className="flex flex-col border p-4 rounded-lg space-y-4 bg-blue-50/30 border-blue-100">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-base text-blue-700 font-semibold">HitPay Gateway (Sandbox Testing)</Label>
+                <p className="text-sm text-muted-foreground">Accept GCash, Maya, Cards via HitPay Sandbox</p>
+              </div>
+              <Switch
+                checked={hitpay.hitpay_is_active}
+                onCheckedChange={(c) => setHitpay({ ...hitpay, hitpay_is_active: c })}
+              />
+            </div>
+
+            {hitpay.hitpay_is_active && (
+              <div className="pt-4 space-y-4 border-t border-blue-100 mt-2">
+                <div className="space-y-2 pl-2">
+                  <Label>API Key (Sandbox)</Label>
+                  <Input
+                    type="password"
+                    placeholder="X-BUSINESS-API-KEY"
+                    value={hitpay.hitpay_api_key}
+                    onChange={(e) => setHitpay({ ...hitpay, hitpay_api_key: e.target.value })}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Found in HitPay Sandbox Dashboard > Settings > Business > API Keys.</p>
+                </div>
+                <div className="space-y-2 pl-2">
+                  <Label>Salt (Sandbox)</Label>
+                  <Input
+                    type="password"
+                    placeholder="HitPay Salt"
+                    value={hitpay.hitpay_salt}
+                    onChange={(e) => setHitpay({ ...hitpay, hitpay_salt: e.target.value })}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Found in HitPay Sandbox Dashboard > Settings > Business > Salt.</p>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col border p-4 rounded-lg space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label className="text-base text-primary font-semibold">Payrex Gateway (Recommended)</Label>
+                <Label className="text-base text-primary font-semibold">Payrex Gateway (Alternate/Production)</Label>
                 <p className="text-sm text-muted-foreground">Accept GCash, PayMaya, Cards via Payrex Philippines</p>
               </div>
-              <Switch 
-                checked={payrex.is_active} 
+              <Switch
+                checked={payrex.is_active}
                 onCheckedChange={(c) => setPayrex({ ...payrex, is_active: c })}
               />
             </div>
-            
+
             {payrex.is_active && (
               <div className="pt-4 space-y-4 border-t mt-2">
                 <div className="space-y-2 pl-2">
                   <Label>Secret Key</Label>
-                  <Input 
-                    type="password" 
-                    placeholder="sk_test_..." 
+                  <Input
+                    type="password"
+                    placeholder="sk_test_..."
                     value={payrex.payrex_secret_key}
                     onChange={(e) => setPayrex({ ...payrex, payrex_secret_key: e.target.value })}
                   />
@@ -167,18 +223,18 @@ const PaymentSettings = () => {
                 </div>
                 <div className="space-y-2 pl-2">
                   <Label>Public Key</Label>
-                  <Input 
-                    type="text" 
-                    placeholder="pk_test_..." 
+                  <Input
+                    type="text"
+                    placeholder="pk_test_..."
                     value={payrex.payrex_public_key}
                     onChange={(e) => setPayrex({ ...payrex, payrex_public_key: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2 pl-2">
                   <Label>Webhook Secret</Label>
-                  <Input 
-                    type="password" 
-                    placeholder="wh_sec_..." 
+                  <Input
+                    type="password"
+                    placeholder="wh_sec_..."
                     value={payrex.payrex_webhook_secret}
                     onChange={(e) => setPayrex({ ...payrex, payrex_webhook_secret: e.target.value })}
                   />
