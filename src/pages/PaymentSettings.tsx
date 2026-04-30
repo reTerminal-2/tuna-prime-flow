@@ -181,7 +181,7 @@ const PaymentSettings = () => {
                     value={hitpay.hitpay_api_key}
                     onChange={(e) => setHitpay({ ...hitpay, hitpay_api_key: e.target.value })}
                   />
-                  <p className="text-[10px] text-muted-foreground">Found in HitPay Sandbox Dashboard > Settings > Business > API Keys.</p>
+                  <p className="text-[10px] text-muted-foreground">Found in HitPay Sandbox Dashboard &gt; Settings &gt; Business &gt; API Keys.</p>
                 </div>
                 <div className="space-y-2 pl-2">
                   <Label>Salt (Sandbox)</Label>
@@ -191,7 +191,7 @@ const PaymentSettings = () => {
                     value={hitpay.hitpay_salt}
                     onChange={(e) => setHitpay({ ...hitpay, hitpay_salt: e.target.value })}
                   />
-                  <p className="text-[10px] text-muted-foreground">Found in HitPay Sandbox Dashboard > Settings > Business > Salt.</p>
+                  <p className="text-[10px] text-muted-foreground">Found in HitPay Sandbox Dashboard &gt; Settings &gt; Business &gt; Salt.</p>
                 </div>
               </div>
             )}
